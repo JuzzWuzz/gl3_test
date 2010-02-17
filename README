@@ -1,0 +1,12 @@
+README
+======
+regl3_test  is basically just me trying to create a simple framework to try out SDL1.3 and OpenGL 3.0...  Nothing much interesting.
+
+BUILD
+=====
+
+Dependencies
+ * SDL 1.3 (download from www.libsdl.org)
+ * OpenGL 3.0
+
+Just run the make file and all should work. its not exactly complicated.
