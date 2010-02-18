@@ -1,18 +1,18 @@
 
-SRC 		= main.cpp regl3.cpp 
+SRC 		= main.cpp regl3.cpp ReTimer.cpp Input.cpp
 OBJ 		= $(SRC:.cpp=.o)
-HDR 		= common.h regl3.h
+HDR 		= common.h regl3.h ReTimer.h
 OUTFILE 	= gl3test
-LIB 		= -lGLU -lGL -lSDL 
+LIB 		= -L/usr/local/lib -Wl,-rpath,/usr/local/lib  -lSDL  -lGL -lGLU
 CC			= g++
 
 all: $(SRC) $(HDR) $(OUTFILE)
 
 
-$(OUTFILE): $(OBJ)
+$(OUTFILE): $(OBJ) 
 	$(CC) -o $@ $(LIB) $(OBJ)
 
-.cpp.o:
+.cpp.o: 
 	$(CC) -c $< -o $@
 
 
