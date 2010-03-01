@@ -1,3 +1,7 @@
+#include "common.h"
+#include "regl3.h"
+#include "ReTimer.h"
+
 /*
     Copyright (C) 2010 Andrew Flower <andrew.flower@gmail.com>
 
@@ -27,6 +31,8 @@ reGL3App::reGL3App(AppConfig conf){
  * Basically just kills SDL at the moment.
  ******************************************************************************/
 reGL3App::~reGL3App(){
+	SDL_GL_DeleteContext(m_context);
+	SDL_DestroyWindow(m_pWindow);
 	SDL_Quit();
 }
 
@@ -44,7 +50,7 @@ reGL3App::Start(){
 	// Display Driver & OpenGL info
 	printf("Vendor      : %s\n", glGetString(GL_VENDOR));
 	printf("Renderer    : %s\n", glGetString(GL_RENDERER));
-	printf("Version     : %s\n", glGetString(GL_VERSION));
+	printf("GL Driver   : %s\n", glGetString(GL_VERSION));
 	if (!InitGL())
 		return false;
 	printf("-----------------------------------------\n");
@@ -119,14 +125,9 @@ reGL3App::InitSDL(){
 	if (!val)
 		printf("No hardware support for SDL\n");
 
-	int minor, major;
-	SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
-	SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
-	printf("Using OpenGL %d.%d\n", major, minor);
-	
 
 	// Enable VSync
-	//SDL_GL_SetSwapInterval(m_config.VSync);
+	SDL_GL_SetSwapInterval(m_config.VSync);
 	return true;
 }
 
@@ -139,12 +140,9 @@ reGL3App::InitGL(){
 	glClearColor(.0f, .0f, .0f, .0f);
 	glClearDepth(1.0f);
 
+	glClear(GL_ACCUM_BUFFER_BIT);
+
 	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_CULL_FACE);
-
-
-	
-
 
 	glViewport(0, 0, m_config.winWidth, m_config.winHeight);
 
@@ -185,8 +183,16 @@ void
 reGL3App::Render(float dt){
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
+	static float rotate = .0f;
+	static float theta = .0f;
+	rotate += dt*90.0f;
+	theta += dt*60.0f/180.0f*3.1415f;
+
 	glLoadIdentity();
 	glTranslatef(.0f, .0f, -5.0f);
+
+	glTranslatef(.0f, .0f, cosf(theta));
+	glRotatef(rotate, .0f, 1.0f, .0f);
 
 	glBegin(GL_TRIANGLES);
 		glColor3f(1.0f, .0f, .0f);
@@ -196,6 +202,11 @@ reGL3App::Render(float dt){
 		glColor3f(.0f, .0f, 1.0f);
 		glVertex3f(1.0f, -1.0f, .0f);
 	glEnd();
+
+
+	glAccum(GL_MULT, .9f);
+	glAccum(GL_ACCUM, .3f);
+	glAccum(GL_RETURN, 1.0f);
 
 	SDL_GL_SwapWindow(m_pWindow);
 }
