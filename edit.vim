@@ -1,5 +1,5 @@
-:open main.cpp
-:vsp common.h
-:tabnew regl3.cpp
-:vsp regl3.h
+:open src/main.cpp
+:vsp src/common.h
+:tabnew src/regl3.cpp
+:vsp src/regl3.h
 
