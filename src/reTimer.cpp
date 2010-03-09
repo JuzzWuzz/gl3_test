@@ -15,10 +15,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "ReTimer.h"
+#include "regl3.h"
 
 //--------------------------------------------------------
-ReTimer::ReTimer(){
+reTimer::reTimer(){
 #ifdef _WIN32
     __int64 tempFreq;
     QueryPerformanceFrequency((LARGE_INTEGER*)&tempFreq);
@@ -28,7 +28,7 @@ ReTimer::ReTimer(){
 }
 
 //--------------------------------------------------------
-void ReTimer::start(){
+void reTimer::start(){
 #ifdef _WIN32
     QueryPerformanceCounter((LARGE_INTEGER*)&m_start);
 #else
@@ -38,7 +38,7 @@ void ReTimer::start(){
 }
 
 //--------------------------------------------------------
-float ReTimer::getElapsed(){
+float reTimer::getElapsed(){
 	m_frameCount++;
 #ifdef _WIN32
     __int64 temp, elapsed;
@@ -55,7 +55,7 @@ float ReTimer::getElapsed(){
 #endif
 }
 
-float ReTimer::getFPS(){
+float reTimer::getFPS(){
 #ifdef _WIN32
 	return m_frameCount/((m_now - m_start)*m_freqInv);
 #else

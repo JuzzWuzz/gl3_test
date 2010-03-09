@@ -15,7 +15,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "common.h"
+#include "regl3.h"
 
 Input::Input(){
 	memset(m_keydown,0, sizeof(m_keydown));

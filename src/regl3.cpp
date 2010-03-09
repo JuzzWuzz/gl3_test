@@ -1,6 +1,5 @@
-#include "common.h"
+
 #include "regl3.h"
-#include "ReTimer.h"
 
 /*
     Copyright (C) 2010 Andrew Flower <andrew.flower@gmail.com>
@@ -218,7 +217,7 @@ reGL3App::Render(float dt){
  ******************************************************************************/
 void
 reGL3App::Run(){
-	ReTimer timer;
+	reTimer timer;
 	timer.start();
 	m_isRunning = true;
 	// Start the main loop

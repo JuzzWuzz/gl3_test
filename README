@@ -10,3 +10,10 @@ Dependencies
  * OpenGL 3.0
 
 Just run the make file and all should work. its not exactly complicated.
+
+
+TODO
+====
+ * Add in the default shaders
+ * Create functions for making projection, transform matrices
+

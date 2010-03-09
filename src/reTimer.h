@@ -14,22 +14,38 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef _COMMON_H_
-#define _COMMON_H_
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string>
-#include <cmath>
+#ifndef _RETIMER_H
+#define	_RETIMER_H
 
-using namespace std;
-
-#include "SDL/SDL.h"
-#include "SDL/SDL_opengl.h"
-
-#include "regl3.h"
-
-
-
-
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <sys/time.h>
 #endif
+
+
+//--------------------------------------------------------
+//--------------------------------------------------------
+class reTimer{
+public:
+    reTimer();
+    void start();
+    float getElapsed();
+	float getFPS();
+    
+protected:
+	long m_frameCount;
+#ifdef _WIN32
+    double m_freqInv;
+    __int64 m_start;
+    __int64 m_now;
+#else
+    timeval m_start;
+    timeval m_now;
+#endif
+};
+
+
+#endif	/* _reTimer_H */
+
