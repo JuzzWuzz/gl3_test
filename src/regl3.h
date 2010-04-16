@@ -19,8 +19,10 @@
 #define _REGL3_H
 
 // SDL and OpenGL
+#define GL_EXT_PROTOTYPES
 #include "SDL/SDL.h"
 #include "SDL/SDL_opengl.h"
+#
 
 // Standard library headers
 #include <stdlib.h>
@@ -58,8 +60,8 @@ struct AppConfig{
 		fsaa		= 0; 		// Fullscreen Antialias (# of samples per pixel)
 		sleepTime 	= .01f;		// Delay in seconds
 		timeStep	= .02f;		// This applies if the logic time-step is locked.
-		gl_major	= 2;
-		gl_minor	= 1;
+		gl_major	= 3;
+		gl_minor	= 2;
 		title		= "SDL1.3 & OpenGL";
 	}
 	void Print(){
