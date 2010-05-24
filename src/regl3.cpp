@@ -22,7 +22,8 @@
  * Just stores the config struct
  ******************************************************************************/
 reGL3App::reGL3App(AppConfig conf){
-	m_config = conf;
+	m_config  = conf;
+	m_isRunning = true;
 }
 
 /******************************************************************************
@@ -50,10 +51,11 @@ reGL3App::Start(){
 	printf("Vendor      : %s\n", glGetString(GL_VENDOR));
 	printf("Renderer    : %s\n", glGetString(GL_RENDERER));
 	printf("GL Driver   : %s\n", glGetString(GL_VERSION));
+	printf("-----------------------------------------\n");
 	if (!InitGL())
 		return false;
-	printf("-----------------------------------------\n");
 	Run();
+	return true;
 }
 
 /******************************************************************************
@@ -219,7 +221,6 @@ void
 reGL3App::Run(){
 	reTimer timer;
 	timer.start();
-	m_isRunning = true;
 	// Start the main loop
 	// If we're locking the logic timestep, run a different loop, rather than checking every iteration.
 	if (m_config.lockLogicTimeStep)

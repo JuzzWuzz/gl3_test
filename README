@@ -14,6 +14,6 @@ Just run the make file and all should work. its not exactly complicated.
 
 TODO
 ====
- * Add in the default shaders
- * Create functions for making projection, transform matrices
+ * Add in the default shaders via a class for shaders
+ * Create functions for making projection, transform matrices and remove those fixed function calls.
 

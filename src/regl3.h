@@ -19,14 +19,15 @@
 #define _REGL3_H
 
 // SDL and OpenGL
-#define GL_EXT_PROTOTYPES
+#define GL_GLEXT_PROTOTYPES
 #include "SDL/SDL.h"
 #include "SDL/SDL_opengl.h"
-#
 
 // Standard library headers
 #include <stdlib.h>
 #include <string>
+#include <fstream>
+#include <sstream>
 using namespace std;
 
 // Headers
@@ -34,6 +35,12 @@ using namespace std;
 #include "reInput.h"
 #include "reTimer.h"
 
+
+/******************************************************************************
+ * MACROS
+ ******************************************************************************/
+#define	RE_DELETE(x)			{		if (x!=NULL) delete x; x=NULL;			}
+#define RE_DELETE_ARR(x)		{		if (x!=NULL) delete[] x; x=NULL;		}
 
 
 /******************************************************************************
@@ -60,8 +67,8 @@ struct AppConfig{
 		fsaa		= 0; 		// Fullscreen Antialias (# of samples per pixel)
 		sleepTime 	= .01f;		// Delay in seconds
 		timeStep	= .02f;		// This applies if the logic time-step is locked.
-		gl_major	= 3;
-		gl_minor	= 2;
+		gl_major	= 2;
+		gl_minor	= 1;
 		title		= "SDL1.3 & OpenGL";
 	}
 	void Print(){
@@ -112,8 +119,6 @@ private:
 	bool				InitSDL();
 	void				Run();
 	void				WinProc();
-
-
 
 public:
 	AppConfig		m_config;

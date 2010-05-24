@@ -74,6 +74,20 @@ reMatrix4 reMatrix4::operator *(const reMatrix4 &mat)const{
 	return out;
 }
 //--------------------------------------------------------
+void reMatrix4::operator *=(const reMatrix4 &mat){
+	float temp[16];
+
+	int row=0;
+	FOR_i(4){
+		FOR_j(4){
+			temp[row+j] = m[row]*mat.m[j]+m[row+1]*mat.m[4+j] 
+						 + m[row+2]*mat.m[8+j] + m[row+3]*mat.m[12+j];
+		}
+		row+=4;
+	}
+	memcpy(this, temp, sizeof(float)*16);
+}
+//--------------------------------------------------------
 reMatrix4 operator*	(float scalar, const reMatrix4& mat){
 	reMatrix4 out;
 	FOR_i(16)
@@ -428,3 +442,44 @@ reVector3 reVector3::GetUnit()const{
 	float magInv = 1.0f/Mag();
 	return reVector3(x*magInv, y*magInv, z*magInv);
 }
+
+/******************************************************************************
+ * SPECIAL MATRICES
+ ******************************************************************************/
+
+void ProjFrustum	(reMatrix4& in, float left, float right, float bottom, float top, float near, float far){
+	reMatrix4 mat4;
+	float* mat = in.m;
+	// top row
+	mat[0] = 2*near / (right - left);
+	mat[2] = (right+left) / (right-left);
+	// second row
+	mat[5] = 2*near / (top - bottom);
+	mat[6] = (top+bottom)/(top-bottom);
+	// third row
+	mat[10]= -(far+near)/(far-near);
+	mat[11]= -(2*far*near)/(far-near);
+	// last row
+	mat[14]= -1.0f;
+	mat[15]= .0f;
+
+	in*=mat4;
+}
+
+void ProjPersp		(reMatrix4& in, float fovy, float aspect, float near, float far){
+	reMatrix4 mat;
+}
+
+void ProjOrtho		(reMatrix4& in, float left, float right, float bottom, float top, float near, float far){
+	reMatrix4 mat;
+}
+
+void TranslateMatrix (reMatrix4& in, float x, float y, float z){
+	reMatrix4 mat;
+	mat[3] =x;
+	mat[7] =y;
+	mat[11]=z;
+	in*=mat;
+}
+
+

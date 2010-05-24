@@ -7,10 +7,14 @@ class reMatrix4;
 class rePoint4;
 class reVector3;
 
-//////////////////////
-// Transforms and Math
+/******************************************************************************
+ * TRANSFORMS AND MATH
+ ******************************************************************************/
 
-//============================================================================
+/******************************************************************************
+ * rePoint4
+ * A Class to represent homogeneous coordinates
+ ******************************************************************************/
 class rePoint4{
 public:
 	rePoint4();
@@ -44,7 +48,10 @@ public:
 };
 rePoint4 operator*	(float scalar, const rePoint4& pt);
 
-//============================================================================
+/******************************************************************************
+ * reVector3
+ * A class to handle 3D vectors and their operations
+ ******************************************************************************/
 class reVector3{
 public:
 	reVector3();
@@ -86,7 +93,11 @@ public:
 };
 reVector3 operator*	(float scalar, const reVector3& vec);
 
-//============================================================================
+/******************************************************************************
+ * reMatrix4
+ * A class to represent 4x4 matrices that are often used in spatial 
+ * transformations
+ ******************************************************************************/
 class reMatrix4{
 public:
 	reMatrix4();
@@ -98,6 +109,7 @@ public:
 	reMatrix4		operator*		(float scalar) const;
 	friend reMatrix4 operator*	(float scalar, const reMatrix4& mat);
 	reMatrix4		operator*		(const reMatrix4& mat) const;
+	void			operator*=		(const reMatrix4& mat);
 	reMatrix4&		operator+=		(const reMatrix4& mat);
 	reMatrix4&		operator-=		(const reMatrix4& mat);
 
@@ -117,5 +129,16 @@ public:
 };
 reMatrix4 operator*	(float scalar, const reMatrix4&);
 
+
+
+/******************************************************************************
+ * SPECIAL MATRICES
+ ******************************************************************************/
+
+void ProjFrustum	(reMatrix4& in, float left, float right, float bottom, float top, float near, float far);
+void ProjPersp		(reMatrix4& in, float fovy, float aspect, float near, float far);
+void ProjOrtho		(reMatrix4& in, float left, float right, float bottom, float top, float near, float far);
+
+void TranslateMatrix(reMatrix4& in, float x, float y, float z);
 
 #endif

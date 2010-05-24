@@ -1,7 +1,7 @@
 
 # Source files, Headers for distribution, internal headers
-SRC_files		= regl3.cpp reTimer.cpp reInput.cpp reMath.cpp 
-HDR_dist_files	= regl3.h reTimer.h reMath.h reInput.h
+SRC_files		= regl3.cpp reTimer.cpp reInput.cpp reMath.cpp reShader.cpp
+HDR_dist_files	= regl3.h reTimer.h reMath.h reInput.h reShader.h
 HDR_files		= util.h
 TEST_SRC		= main.cpp
 # The compiled object filenames
@@ -30,21 +30,24 @@ CFLAGS		=
 LDFLAGS 	= -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL  -lGL -lGLU
 ARFLAGS		= rcs
 
+
+# default makes test
+test: $(SRC) bin/main.o $(HDR) $(OUTFILE)
+
+all: lib test
+
 # The rule to make the library
 lib: $(SRC) $(HDR) $(LIBNAME)
 
-test: $(SRC) $(HDR) $(OUTFILE)
-
-
 # Link all object files and the needed libraries
-$(OUTFILE): $(OBJ)
+$(OUTFILE): $(OBJ) bin/main.o
 	$(CXX) -o $@ $(LDFLAGS) $(OBJ) $(SRCDIR)$(TEST_SRC)
 
 # Compile all the source files in the source directory into 
 # object files in the bin directory
 $(BINDIR)%.o : $(SRCDIR)%.cpp
 	mkdir -p $(BINDIR)
-	$(CXX) -c $< -o $@
+	$(CXX) -g -c $< -o $@
 
 # makes a library archive for regl3, copying it and the necessary headers to dist directory
 $(LIBNAME): $(OBJ)
