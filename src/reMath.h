@@ -96,7 +96,7 @@ reVector3 operator*	(float scalar, const reVector3& vec);
 /******************************************************************************
  * reMatrix4
  * A class to represent 4x4 matrices that are often used in spatial 
- * transformations
+ * transformations. Note column-major indices
  ******************************************************************************/
 class reMatrix4{
 public:

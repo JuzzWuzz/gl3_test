@@ -149,7 +149,7 @@ reGL3App::InitGL(){
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(45, float(m_config.winWidth)/float(m_config.winHeight), .1f, 100.0f);
+	gluPerspective(45, float(m_config.winWidth)/float(m_config.winHeight), 1.0f, 100.0f);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();

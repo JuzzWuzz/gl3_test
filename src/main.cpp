@@ -142,16 +142,29 @@ TestApp::Render(float dt){
 	rotate += dt*150.0f;
 	theta += dt*60.0f/180.0f*3.1415f;
 
-	//reMatrix4 mvp;
-	//ProjFrustum(mvp, -10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 100.0f);
+	reMatrix4 mvp;
+	float aspect = float(m_config.winWidth)/m_config.winHeight;
+
+	// left = tan(fov/2) * zNear; right = -left;
+	// 
+	ProjFrustum(mvp, -1.0f, 1.0f, -1.f/aspect, 1.f/aspect, 1.0f, 100.0f);
+
 
 	glLoadIdentity();
-	glTranslatef(.0f, .0f, -5.0f);
+	TranslateMatrix(mvp, 1.0f, .0f, -5.0f);
+	glTranslatef(2.0f, .0f, -5.0f);
 
-	//glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE, mvp.m);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
+			mvp.Transpose().m);
+	
+	//TODO
+	So what you need to do, Andrew, is fix the matrix math.  Currently the above statement works
+		when we use the transpose of mvp only... meaning we need to change to column major or
+		something. check it out and sort it out. after that's working, check that the rotate
+		function works as well as ProjPerspective and ortho.
 
-	glRotatef(rotate, .0f, 1.0f, .0f);
-	glRotatef(theta*10.0f, .1f, .0f, .0f);
+	//glRotatef(rotate, .0f, 1.0f, .0f);
+	//glRotatef(theta*10.0f, .1f, .0f, .0f);
 
 
 	glBindVertexArray(m_vao);
@@ -163,7 +176,6 @@ TestApp::Render(float dt){
 
 	SDL_GL_SwapWindow(m_pWindow);
 }
-
 
 
 
