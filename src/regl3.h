@@ -26,22 +26,22 @@
 // Standard library headers
 #include <stdlib.h>
 #include <string>
+#include <stdio.h>
 #include <fstream>
 #include <sstream>
+#include <cmath>
 using namespace std;
 
 // Headers
-#include "reMath.h"
-#include "reInput.h"
-#include "reTimer.h"
+#include "re_input.h"
+#include "re_timer.h"
 
 
 /******************************************************************************
- * MACROS
+ * MACROS & DEFINES
  ******************************************************************************/
 #define	RE_DELETE(x)			{		if (x!=NULL) delete x; x=NULL;			}
 #define RE_DELETE_ARR(x)		{		if (x!=NULL) delete[] x; x=NULL;		}
-
 
 /******************************************************************************
  * TYPEDEFS

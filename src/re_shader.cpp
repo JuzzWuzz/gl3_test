@@ -1,6 +1,13 @@
 
-#include "regl3.h"
-#include "reShader.h"
+#include <string>
+#include <fstream>
+#include <sstream>
+#define GL_GLEXT_PROTOTYPES
+#include "SDL/SDL.h"
+#include "SDL/SDL_opengl.h"
+
+using namespace std;
+#include "re_shader.h"
 
 
 //--------------------------------------------------------
@@ -11,11 +18,11 @@ ShaderProg::ShaderProg(string vertPath, string geomPath, string fragPath){
 	m_programID = glCreateProgram();
 
 	m_vertShID = glCreateShader(GL_VERTEX_SHADER);
-	//m_geomShID = glCreateShader(GL_GEOMETRY_SHADER);
+	m_geomShID = glCreateShader(GL_GEOMETRY_SHADER);
 	m_fragShID = glCreateShader(GL_FRAGMENT_SHADER);
 
 	vertSource = LoadSource(vertPath);
-	//geomSource = LoadSource(geomPath);
+	geomSource = LoadSource(geomPath);
 	fragSource = LoadSource(fragPath);
 
 	vsrc = vertSource.c_str();
@@ -23,7 +30,7 @@ ShaderProg::ShaderProg(string vertPath, string geomPath, string fragPath){
 	fsrc = fragSource.c_str();
 
 	glShaderSource(m_vertShID, 1, (const char**)&vsrc, NULL);
-	//glShaderSource(m_geomShID, 1, &gsrc, NULL);
+	glShaderSource(m_geomShID, 1, &gsrc, NULL);
 	glShaderSource(m_fragShID, 1, &fsrc, NULL);
 }
 
@@ -39,8 +46,8 @@ ShaderProg::CompileAndLink(){
 
 	if (!SetupShader(m_vertShID))
 		return 0;
-	//if (!SetupShader(m_geomShID))
-	//	return 0;
+	if (!SetupShader(m_geomShID))
+		return 0;
 	if (!SetupShader(m_fragShID))
 		return 0;
 	

@@ -1,7 +1,10 @@
 :open src/regl3.cpp
 :vsp src/regl3.h
 :tabnew src/main.cpp
-:tabnew src/reShader.h
-:vsp src/reShader.cpp
+:tabnew src/re_shader.h
+:vsp src/re_shader.cpp
 :tabnew example.frag
+:vsp example.geom
 :vsp example.vert
+:tabnew src/re_math.cpp
+:vsp src/re_math.h

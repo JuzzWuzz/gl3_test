@@ -1,7 +1,10 @@
+#version 150 core
 
-varying vec4 color;
+in vec4 interpColor;
+
+out vec4 frag_Color;
 
 void main(){
-	gl_FragColor = color;
+	frag_Color = interpColor;
 }
 

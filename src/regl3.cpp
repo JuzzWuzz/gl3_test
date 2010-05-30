@@ -92,7 +92,7 @@ reGL3App::InitSDL(){
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	// Desired OpenGL context version
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, m_config.gl_major);
@@ -134,7 +134,7 @@ reGL3App::InitSDL(){
 
 /******************************************************************************
  * InitGL
- * Initializes OpenGL stuff, like projections.
+ * Initializes OpenGL stuff
  ******************************************************************************/
 bool
 reGL3App::InitGL(){
@@ -147,12 +147,6 @@ reGL3App::InitGL(){
 
 	glViewport(0, 0, m_config.winWidth, m_config.winHeight);
 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(45, float(m_config.winWidth)/float(m_config.winHeight), 1.0f, 100.0f);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
 	return true;
 }
 
@@ -178,36 +172,11 @@ reGL3App::ProcessInput(float dt){
 
 /******************************************************************************
  * Render
- * Performs the drawing to GL context. The default is just a red triangle
+ * Performs the drawing to GL context. The default is a blank screen
  ******************************************************************************/
 void
 reGL3App::Render(float dt){
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-	static float rotate = .0f;
-	static float theta = .0f;
-	rotate += dt*90.0f;
-	theta += dt*60.0f/180.0f*3.1415f;
-
-	glLoadIdentity();
-	glTranslatef(.0f, .0f, -5.0f);
-
-	glTranslatef(.0f, .0f, cosf(theta));
-	glRotatef(rotate, .0f, 1.0f, .0f);
-
-	glBegin(GL_TRIANGLES);
-		glColor3f(1.0f, .0f, .0f);
-		glVertex3f(.0f, 1.0f, .0f);
-		glColor3f(.0f, 1.0f, .0f);
-		glVertex3f(-1.0f, -1.0f, .0f);
-		glColor3f(.0f, .0f, 1.0f);
-		glVertex3f(1.0f, -1.0f, .0f);
-	glEnd();
-
-
-	glAccum(GL_MULT, .9f);
-	glAccum(GL_ACCUM, .3f);
-	glAccum(GL_RETURN, 1.0f);
 
 	SDL_GL_SwapWindow(m_pWindow);
 }
@@ -285,6 +254,11 @@ reGL3App::WinProc(){
 	while (SDL_PollEvent(&evt)){
 		switch(evt.type){
 			case SDL_KEYDOWN:
+				// Don't really understand what SDL guys are doing with their key
+				// codes, but ill just do this hack to remove the bitflag so it
+				// can fit in the array
+				if (evt.key.keysym.sym & (1<<30))
+					evt.key.keysym.sym ^= (1<<30);
 				m_input.PressKey(evt.key.keysym.sym);
 				break;
 			case SDL_KEYUP:

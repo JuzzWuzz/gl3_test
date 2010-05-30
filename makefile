@@ -1,7 +1,7 @@
 
 # Source files, Headers for distribution, internal headers
-SRC_files		= regl3.cpp reTimer.cpp reInput.cpp reMath.cpp reShader.cpp
-HDR_dist_files	= regl3.h reTimer.h reMath.h reInput.h reShader.h
+SRC_files		= regl3.cpp re_timer.cpp re_input.cpp re_math.cpp re_shader.cpp
+HDR_dist_files	= regl3.h re_timer.h re_math.h re_input.h re_shader.h
 HDR_files		= util.h
 TEST_SRC		= main.cpp
 # The compiled object filenames

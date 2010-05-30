@@ -16,7 +16,10 @@
 */
 
 #include "regl3.h"
-#include "reShader.h"
+#include "re_math.h"
+#include "re_shader.h"
+
+using namespace reMath;
 
 /******************************************************************************
  * TestApp - Example simple implementation of a reGL3App subclass
@@ -103,7 +106,7 @@ TestApp::Init(){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 12, inds, GL_STATIC_DRAW);
 
 	// Get the Shaders to Compile
-	m_shMain = new ShaderProg("example.vert","","example.frag");
+	m_shMain = new ShaderProg("example.vert","example.geom","example.frag");
 
 	// Bind attributes to shader variables. NB = must be done before linking shader
 	// allows the attributes to be declared in any order in the shader.
@@ -122,9 +125,18 @@ TestApp::Init(){
 	return true;
 }
 
+
+float t = .0f;
+
 //--------------------------------------------------------
 void
 TestApp::ProcessInput(float dt){
+
+	if (m_input.IsKeyPressed(SDLK_a))
+		t -= dt*1.0f;
+	if (m_input.IsKeyPressed(SDLK_d))
+		t += dt*1.0f;
+
 	reGL3App::ProcessInput(dt);
 }
 
@@ -137,35 +149,20 @@ TestApp::Logic(float dt){
 void
 TestApp::Render(float dt){
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
 	static float rotate = .0f;
-	static float theta = .0f;
-	rotate += dt*150.0f;
-	theta += dt*60.0f/180.0f*3.1415f;
+	rotate += dt;
 
-	reMatrix4 mvp;
 	float aspect = float(m_config.winWidth)/m_config.winHeight;
+	matrix4 mvp = frustum_proj(-1.0f, 1.0f, -1.f/aspect, 1.f/aspect, 1.0f, 100.0f);
 
-	// left = tan(fov/2) * zNear; right = -left;
-	// 
-	ProjFrustum(mvp, -1.0f, 1.0f, -1.f/aspect, 1.f/aspect, 1.0f, 100.0f);
+	mvp *= translate_tr (t, .0f, -5.0f);
 
-
-	glLoadIdentity();
-	TranslateMatrix(mvp, 1.0f, .0f, -5.0f);
-	glTranslatef(2.0f, .0f, -5.0f);
+	mvp *= rotate_tr (rotate, .0f, 1.0f, .0f);
+	mvp *= scale_tr (2.0f, 2.0f, 2.0f);
 
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
-			mvp.Transpose().m);
-	
-	//TODO
-	So what you need to do, Andrew, is fix the matrix math.  Currently the above statement works
-		when we use the transpose of mvp only... meaning we need to change to column major or
-		something. check it out and sort it out. after that's working, check that the rotate
-		function works as well as ProjPerspective and ortho.
-
-	//glRotatef(rotate, .0f, 1.0f, .0f);
-	//glRotatef(theta*10.0f, .1f, .0f, .0f);
-
+			mvp.m);
 
 	glBindVertexArray(m_vao);
 	glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
@@ -185,9 +182,13 @@ TestApp::Render(float dt){
 int main(){
 	AppConfig conf;
 	conf.VSync = true;
+	conf.gl_major = 3;
+	conf.gl_minor = 2;
+	conf.fsaa=0;
 	TestApp test(conf);
 	
 	if (!test.Start())
 		printf("Application failed to start\n");
+
 	return 0;
 }
