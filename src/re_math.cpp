@@ -637,7 +637,7 @@ namespace reMath{
 		// third
 		mat[10] = -2.0f/(far-near);
 		// last column
-		mat[12] = -(right+left)/(right=left);
+		mat[12] = -(right+left)/(right-left);
 		mat[13] = -(top+bottom)/(top-bottom);
 		mat[14] = -(far+near)/(far-near);
 		mat[15] = 1.0f;
@@ -660,7 +660,7 @@ namespace reMath{
 		// third
 		mat[10] = -1.0f;
 		// last column
-		mat[12] = -(right+left)/(right=left);
+		mat[12] = -(right+left)/(right-left);
 		mat[13] = -(top+bottom)/(top-bottom);
 		mat[14] = .0f;
 		mat[15] = 1.0f;
