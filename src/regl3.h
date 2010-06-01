@@ -19,9 +19,14 @@
 #define _REGL3_H
 
 // SDL and OpenGL
-#define GL_GLEXT_PROTOTYPES
 #include "SDL/SDL.h"
-#include "SDL/SDL_opengl.h"
+#ifdef _WIN32
+#	define GLEW_STATIC 1
+#	include "GL/GLEW.H"
+#else
+#	define GL_GLEXT_PROTOTYPES
+#	include "SDL/SDL_opengl.h"
+#endif
 
 // Standard library headers
 #include <stdlib.h>

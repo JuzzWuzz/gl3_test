@@ -15,6 +15,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+#ifdef _WIN32
+//#	pragma comment(linker, "/SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup")
+#	pragma comment(linker, "/SUBSYSTEM:CONSOLE /ENTRY:mainCRTStartup")
+#	define GLEW_STATIC 1
+#	pragma comment(lib, "opengl32.lib")
+#	pragma comment(lib, "sdl.lib")
+#	pragma comment(lib, "sdlmain.lib")
+#endif
+
 #include "regl3.h"
 #include "re_math.h"
 #include "re_shader.h"
@@ -72,6 +82,8 @@ bool
 TestApp::Init(){
 	GLuint m_vbo[3], ibo;
 
+	if (GLEW_OK != glewInit())
+		return false;
 	const GLfloat verts[4][3]={
 				{ .0f, 		.5f,	.0f},
 				{ -.433f,	-.25f,	-.25f},
@@ -179,7 +191,7 @@ TestApp::Render(float dt){
 /******************************************************************************
  * Main 
  ******************************************************************************/
-int main(){
+int main(int argc, char* argv[]){
 	AppConfig conf;
 	conf.VSync = true;
 	conf.gl_major = 3;
