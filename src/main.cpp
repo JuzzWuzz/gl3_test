@@ -82,8 +82,11 @@ bool
 TestApp::Init(){
 	GLuint m_vbo[3], ibo;
 
+#ifdef _WIN32
 	if (GLEW_OK != glewInit())
 		return false;
+#endif
+
 	const GLfloat verts[4][3]={
 				{ .0f, 		.5f,	.0f},
 				{ -.433f,	-.25f,	-.25f},
