@@ -103,8 +103,10 @@ reGL3App::InitSDL(){
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
 		SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, m_config.fsaa);
 	}
-	// HW acceleration
-	SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	else{
+		// HW acceleration
+		SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
+	}
 
 	// Create the window
 	m_pWindow = SDL_CreateWindow(m_config.title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 

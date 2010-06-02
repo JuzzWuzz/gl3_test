@@ -199,7 +199,7 @@ int main(int argc, char* argv[]){
 	conf.VSync = true;
 	conf.gl_major = 3;
 	conf.gl_minor = 2;
-	conf.fsaa=0;
+	conf.fsaa=4;
 	TestApp test(conf);
 	
 	if (!test.Start())
