@@ -16,10 +16,14 @@ private:
 
 public:
 	ShaderProg*		m_shMain;	// use the provided shader program class
+	ShaderProg*		m_shDrawNormals;
 
 	GLuint			m_vao;
 	GLuint			m_vbo[4];	// VBOs for vertices, normals, colors, indices
 	matrix4			m_proj_mat;
+	matrix4			m_camera_mat;
+	vector3			m_cam_rotate;
+	vector3			m_cam_translate;
 };
 
 
