@@ -27,10 +27,10 @@
 
 #include "regl3.h"
 #include "re_math.h"
+using namespace reMath;
 #include "re_shader.h"
 #include "main.h"
 
-using namespace reMath;
 
 
 /******************************************************************************
@@ -42,7 +42,7 @@ int main(int argc, char* argv[]){
 	conf.gl_major = 3;
 	conf.gl_minor = 2;
 	conf.fsaa=0;
-	TestApp test(conf);
+	ProtoApp test(conf);
 	
 	if (!test.Start())
 		printf("Application failed to start\n");

@@ -42,7 +42,7 @@ test: $(DISTDIR)$(LIBNAME) $(SRC) $(OBJ) $(OUTFILE)
 
 # Link all object files and the needed libraries
 $(OUTFILE): $(OBJ) $(DISTDIR)$(LIBNAME)
-	$(CXX) -o $@ $(LDFLAGS) -L$(DISTDIR) -l$(LIBNAME) $(OBJ)
+	$(CXX) -o $@ $(LDFLAGS) $(OBJ) $(LIB_OBJ)
 
 # Compile all the source files in the source directory into 
 # object files in the bin directory
@@ -52,7 +52,7 @@ $(LIB_BINDIR)%.o : $(LIB_SRCDIR)%.cpp $(LIB_SRCDIR)%.h
 
 $(BINDIR)%.o : $(SRCDIR)%.cpp
 	mkdir -p $(BINDIR)
-	$(CXX) -g -c $< -o $@
+	$(CXX) $(CFLAGS) -g -c $< -o $@
 
 # makes a library archive for regl3, copying it and the necessary headers to dist directory
 $(DISTDIR)$(LIBNAME): $(LIB_OBJ)
@@ -61,8 +61,6 @@ $(DISTDIR)$(LIBNAME): $(LIB_OBJ)
 	$(AR) $(ARFLAGS) $(DISTDIR)$(LIBNAME) $(LIB_OBJ)
 	cp $(LIB_HDR) $(DISTDIR)
 	cd $(DISTDIR);tar zcvf $(TARNAME) *
-
-
 
 clean:
 	rm -f $(OUTFILE)
