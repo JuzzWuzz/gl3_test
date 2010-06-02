@@ -121,7 +121,7 @@ TestApp::Init(){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 12, inds, GL_STATIC_DRAW);
 
 	// Get the Shaders to Compile
-	m_shMain = new ShaderProg("example.vert","example.geom","example.frag");
+	m_shMain = new ShaderProg("shaders/example.vert","shaders/example.geom","shaders/example.frag");
 
 	// Bind attributes to shader variables. NB = must be done before linking shader
 	// allows the attributes to be declared in any order in the shader.
