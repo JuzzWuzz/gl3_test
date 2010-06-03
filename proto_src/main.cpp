@@ -244,12 +244,12 @@ ProtoApp::Render(float dt){
 	glUseProgram(m_shDrawNormals->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
 			(m_proj_mat*modelview).m);
-	glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
+	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
 	// Use the shader program
 	glUseProgram(m_shMain->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shDrawNormals->m_programID, "mvpMatrix"), 1, GL_FALSE,
 			(m_proj_mat*modelview).m);
-	glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
+	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
 
 	SDL_GL_SwapWindow(m_pWindow);
 }

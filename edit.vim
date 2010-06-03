@@ -2,5 +2,7 @@
 :vsp proto_src/main.cpp
 :tabnew shaders/phongtess.frag
 :vsp shaders/phongtess.geom
+:set syntax=glsl
 :vsp shaders/phongtess.vert
+:set syntax=glsl
 
