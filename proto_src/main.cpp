@@ -115,8 +115,8 @@ ProtoApp::Init(){
 	};
 	const GLfloat colors[3][3]={
 		{1.0f, .0f, .0f},
-		{1.0f, .0f, .0f},
-		{1.0f, .0f, .0f}
+		{.0f, 1.0f, .0f},
+		{.0f, .0f, 1.0f}
 	};
 	const GLfloat normals[3][3]={
 		{1.0f, 1.0f, 1.0f},

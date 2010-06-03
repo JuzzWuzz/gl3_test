@@ -5,7 +5,7 @@
 layout(triangles) in;
 
 // Declare the resulting primitive type
-layout(triangles, max_vertices=192)  out;
+layout(triangles, max_vertices=108)  out;
 
 // Uniforms (from host code)
 uniform mat4 mvpMatrix;
@@ -16,10 +16,11 @@ in vec4 geom_Normal[3];
 
 // Outgoing per-vertex information
 out vec4 interpColor;
+out vec4 interpNormal;
 
+// Triangle with vertices specified using barycentric coordinates
 struct Triangle{
-	vec4 v0, v1, v2;
-	vec4 n0, n1, n2;
+	vec3 v0, v1, v2;
 };
 
 
@@ -29,28 +30,41 @@ void equi_cent(int levels, Triangle t);
 void centroid_1(int levels, Triangle t);
 void centroid_2(int levels, Triangle t);
 void centroid_3(int levels, Triangle t);
-vec4 lerpVert(vec3 bary, Triangle parent);
+void make_tri(Triangle t);
 
 
+// Globals
+vec4 vertex[3];
+vec4 normal[3];
 
 //--------------------------------------------------------
 void main(){
-	int levels =3;
+	int levels = 3;
 	int i;
 	Triangle t;
 
+	// calculate transformed vertices and store globally
+	vertex[0] = mvpMatrix * gl_in[0].gl_Position;
+	vertex[1] = mvpMatrix * gl_in[1].gl_Position;
+	vertex[2] = mvpMatrix * gl_in[2].gl_Position;
+	normal[0] = mvpMatrix * geom_Normal[0];
+	normal[1] = mvpMatrix * geom_Normal[1];
+	normal[2] = mvpMatrix * geom_Normal[2];
+
+	// "Recursively" tessellate triangle
 	if (levels == 0){
 		for (i = 0; i < gl_in.length(); i++){
-			gl_Position = mvpMatrix * gl_in[i].gl_Position;
+			gl_Position = vertex[i];
 			interpColor = geom_Color[i];
 			EmitVertex();
 		}
 		EndPrimitive();
 	}
 	else{
-		t.v0 = mvpMatrix * gl_in[0].gl_Position;
-		t.v1 = mvpMatrix * gl_in[1].gl_Position;
-		t.v2 = mvpMatrix * gl_in[2].gl_Position;
+
+		t.v0 = vec3(1.0, .0, .0);
+		t.v1 = vec3(.0, 1.0, .0);
+		t.v2 = vec3(.0, .0, 1.0);
 		
 		equi_cent(levels - 1, t);
 	}
@@ -58,10 +72,25 @@ void main(){
 
 
 //--------------------------------------------------------
+void make_tri (Triangle t){
+
+	gl_Position = t.v0.x * vertex[0] + t.v0.y * vertex[1] + t.v0.z * vertex[2];
+	interpColor = t.v0.x * geom_Color[0] + t.v0.y * geom_Color[1] + t.v0.z * geom_Color[2];
+	EmitVertex();
+	gl_Position = t.v1.x * vertex[0] + t.v1.y * vertex[1] + t.v1.z * vertex[2];
+	interpColor = t.v1.x * geom_Color[0] + t.v1.y * geom_Color[1] + t.v1.z * geom_Color[2];
+	EmitVertex();
+	gl_Position = t.v2.x * vertex[0] + t.v2.y * vertex[1] + t.v2.z * vertex[2];
+	interpColor = t.v2.x * geom_Color[0] + t.v2.y * geom_Color[1] + t.v2.z * geom_Color[2];
+	EmitVertex();
+	EndPrimitive();
+}
+
+//--------------------------------------------------------
 void centroid_1(int levels, Triangle t){
 	int i, j;
 	Triangle t_new[3];
-	vec4 v_cent;
+	vec3 v_cent;
 
 	v_cent = (t.v0 + t.v1 + t.v2)*.3333333;
 
@@ -79,16 +108,7 @@ void centroid_1(int levels, Triangle t){
 
 	if (levels==0){
 		for (j = 0; j < 3; j++){
-			gl_Position = t_new[j].v0;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v1;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v2;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			EndPrimitive();
+			make_tri(t_new[j]);
 		}
 	}
 	else{
@@ -103,7 +123,7 @@ void centroid_1(int levels, Triangle t){
 void centroid_2(int levels, Triangle t){
 	int i, j;
 	Triangle t_new[3];
-	vec4 v_cent;
+	vec3 v_cent;
 
 	v_cent = (t.v0 + t.v1 + t.v2)*.3333333;
 
@@ -121,16 +141,7 @@ void centroid_2(int levels, Triangle t){
 
 	if (levels==0){
 		for (j = 0; j < 3; j++){
-			gl_Position = t_new[j].v0;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v1;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v2;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			EndPrimitive();
+			make_tri(t_new[j]);
 		}
 	}
 	else{
@@ -140,12 +151,11 @@ void centroid_2(int levels, Triangle t){
 	}
 
 }
-
 //--------------------------------------------------------
 void centroid_3(int levels, Triangle t){
 	int i, j;
 	Triangle t_new[3];
-	vec4 v_cent;
+	vec3 v_cent;
 
 	v_cent = (t.v0 + t.v1 + t.v2)*.3333333;
 
@@ -163,16 +173,7 @@ void centroid_3(int levels, Triangle t){
 
 	if (levels==0){
 		for (j = 0; j < 3; j++){
-			gl_Position = t_new[j].v0;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v1;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v2;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			EndPrimitive();
+			make_tri(t_new[j]);
 		}
 	}
 }
@@ -181,7 +182,7 @@ void centroid_3(int levels, Triangle t){
 void equi_1(int levels, Triangle t){
 	int i, j;
 	Triangle t_new[4];
-	vec4 v01, v12, v20;
+	vec3 v01, v12, v20;
 
 	v01 = mix(t.v0, t.v1, .5);
 	v12 = mix(t.v1, t.v2, .5);
@@ -205,16 +206,7 @@ void equi_1(int levels, Triangle t){
 
 	if (levels==0){
 		for (j = 0; j < 4; j++){
-			gl_Position = t_new[j].v0;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v1;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v2;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			EndPrimitive();
+			make_tri(t_new[j]);
 		}
 	}
 	else{
@@ -229,7 +221,7 @@ void equi_1(int levels, Triangle t){
 void equi_2(int levels, Triangle t){
 	int i, j;
 	Triangle t_new[4];
-	vec4 v01, v12, v20;
+	vec3 v01, v12, v20;
 
 	v01 = mix(t.v0, t.v1, .5);
 	v12 = mix(t.v1, t.v2, .5);
@@ -253,25 +245,15 @@ void equi_2(int levels, Triangle t){
 
 	if (levels==0){
 		for (j = 0; j < 4; j++){
-			gl_Position = t_new[j].v0;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v1;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v2;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			EndPrimitive();
+			make_tri(t_new[j]);
 		}
 	}
 }
-
 //--------------------------------------------------------
 void equi_cent(int levels, Triangle t){
 	int i, j;
 	Triangle t_new[4];
-	vec4 v01, v12, v20;
+	vec3 v01, v12, v20;
 
 	v01 = mix(t.v0, t.v1, .5);
 	v12 = mix(t.v1, t.v2, .5);
@@ -295,19 +277,10 @@ void equi_cent(int levels, Triangle t){
 
 	if (levels==0){
 		for (j = 0; j < 4; j++){
-			gl_Position = t_new[j].v0;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v1;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			gl_Position = t_new[j].v2;
-			interpColor = geom_Color[0];
-			EmitVertex();
-			EndPrimitive();
+			make_tri(t_new[j]);
 		}
 	}
-	else{
+	else{	
 		centroid_1(levels - 1, t_new[0]);
 		centroid_1(levels - 1, t_new[1]);
 		centroid_1(levels - 1, t_new[2]);
