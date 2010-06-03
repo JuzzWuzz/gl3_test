@@ -89,14 +89,36 @@ ProtoApp::InitGL(){
 
 	// init projection matrix
 	float aspect = float(m_config.winWidth)/m_config.winHeight;
-	m_proj_mat = frustum_proj(-1.0f, 1.0f, -1.f/aspect, 1.f/aspect, .5f, 20.0f);
-	
+	//m_proj_mat = frustum_proj(-1.0f, 1.0f, -1.f/aspect, 1.f/aspect, .5f, 20.0f);
+	m_proj_mat = perspective_proj(PI*.5f, aspect, .5f, 20.0f);
+
 	// Init Camera
 	m_cam_translate.z = -5.0f;
 	m_cam_rotate.x = PI*.1f;
 	m_camera_mat = translate_tr(m_cam_translate.x, m_cam_translate.y, m_cam_translate.z)
 				*	rotate_tr(m_cam_rotate.x, 1.0f, .0f, .0f)
 				*	rotate_tr(m_cam_rotate.y, .0f, 1.0f, .0f);
+
+	// Init Shaders
+	// Get the Shaders to Compile
+	m_shMain = new ShaderProg("shaders/phongtess.vert","shaders/phongtess.geom","shaders/phongtess.frag");
+	m_shDrawNormals = new ShaderProg("shaders/phongtess.vert","shaders/normals.geom","shaders/phongtess.frag");
+
+	// Bind attributes to shader variables. NB = must be done before linking shader
+	// allows the attributes to be declared in any order in the shader.
+	glBindAttribLocation(m_shMain->m_programID, 0, "in_Position");
+	glBindAttribLocation(m_shMain->m_programID, 1, "in_Color");
+	glBindAttribLocation(m_shMain->m_programID, 2, "in_Normal");
+	glBindAttribLocation(m_shDrawNormals->m_programID, 0, "in_Position");
+	glBindAttribLocation(m_shDrawNormals->m_programID, 1, "in_Color");
+	glBindAttribLocation(m_shDrawNormals->m_programID, 2, "in_Normal");
+
+	// NB. must be done after binding attributes
+	int res = m_shMain->CompileAndLink() && m_shDrawNormals->CompileAndLink();
+	if (!res){
+		printf("Will not continue without working shaders\n");
+		return false;
+	}
 
 	if (!Init())
 		return false;
@@ -151,27 +173,6 @@ ProtoApp::Init(){
 	// Setup the index buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[3]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 12, inds, GL_STATIC_DRAW);
-
-	// Get the Shaders to Compile
-	m_shMain = new ShaderProg("shaders/phongtess.vert","shaders/phongtess.geom","shaders/phongtess.frag");
-	m_shDrawNormals = new ShaderProg("shaders/phongtess.vert","shaders/normals.geom","shaders/phongtess.frag");
-
-	// Bind attributes to shader variables. NB = must be done before linking shader
-	// allows the attributes to be declared in any order in the shader.
-	glBindAttribLocation(m_shMain->m_programID, 0, "in_Position");
-	glBindAttribLocation(m_shMain->m_programID, 1, "in_Color");
-	glBindAttribLocation(m_shMain->m_programID, 2, "in_Normal");
-	glBindAttribLocation(m_shDrawNormals->m_programID, 0, "in_Position");
-	glBindAttribLocation(m_shDrawNormals->m_programID, 1, "in_Color");
-	glBindAttribLocation(m_shDrawNormals->m_programID, 2, "in_Normal");
-
-	// NB. must be done after binding attributes
-	int res = m_shMain->CompileAndLink() && m_shDrawNormals->CompileAndLink();
-	if (!res){
-		printf("Will not continue without working shaders\n");
-		Quit();
-	}
-
 
 
 	return true;

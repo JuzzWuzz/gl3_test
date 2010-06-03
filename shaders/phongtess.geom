@@ -31,6 +31,7 @@ void centroid_1(int levels, Triangle t);
 void centroid_2(int levels, Triangle t);
 void centroid_3(int levels, Triangle t);
 void make_tri(Triangle t);
+vec4 phong_tess(vec3 v);
 
 
 // Globals
@@ -39,7 +40,7 @@ vec4 normal[3];
 
 //--------------------------------------------------------
 void main(){
-	int levels = 3;
+	int levels = 2;
 	int i;
 	Triangle t;
 
@@ -47,9 +48,9 @@ void main(){
 	vertex[0] = mvpMatrix * gl_in[0].gl_Position;
 	vertex[1] = mvpMatrix * gl_in[1].gl_Position;
 	vertex[2] = mvpMatrix * gl_in[2].gl_Position;
-	normal[0] = mvpMatrix * geom_Normal[0];
-	normal[1] = mvpMatrix * geom_Normal[1];
-	normal[2] = mvpMatrix * geom_Normal[2];
+	normal[0] = normalize(mvpMatrix * geom_Normal[0]);
+	normal[1] = normalize(mvpMatrix * geom_Normal[1]);
+	normal[2] = normalize(mvpMatrix * geom_Normal[2]);
 
 	// "Recursively" tessellate triangle
 	if (levels == 0){
@@ -66,21 +67,43 @@ void main(){
 		t.v1 = vec3(.0, 1.0, .0);
 		t.v2 = vec3(.0, .0, 1.0);
 		
-		equi_cent(levels - 1, t);
+		equi_1(levels - 1 ,t);
 	}
 }
 
+//--------------------------------------------------------
+vec4 phong_tess(vec3 v){
+	vec4 newvert, p0, p1, p2;
+	float a,b,c;
+
+	a = v.x;
+	b = v.y;
+	c = v.z;
+
+	newvert = a * vertex[0] + b * vertex[1] + c * vertex[2];
+	p0 = newvert - dot( newvert - vertex[0], normal[0]) * normal[0];
+	p1 = newvert - dot( newvert - vertex[1], normal[1]) * normal[1];
+	p2 = newvert - dot( newvert - vertex[2], normal[2]) * normal[2];
+
+	return .25*newvert + .75*(a*p0 + b*p1 + c*p2);
+}
 
 //--------------------------------------------------------
 void make_tri (Triangle t){
-
-	gl_Position = t.v0.x * vertex[0] + t.v0.y * vertex[1] + t.v0.z * vertex[2];
+	vec4 newvert, p0, p1, p2;
+	
+	// Vertex 1
+	gl_Position = phong_tess(t.v0);
 	interpColor = t.v0.x * geom_Color[0] + t.v0.y * geom_Color[1] + t.v0.z * geom_Color[2];
 	EmitVertex();
-	gl_Position = t.v1.x * vertex[0] + t.v1.y * vertex[1] + t.v1.z * vertex[2];
+
+	// Vertex 2
+	gl_Position = phong_tess(t.v1);
 	interpColor = t.v1.x * geom_Color[0] + t.v1.y * geom_Color[1] + t.v1.z * geom_Color[2];
 	EmitVertex();
-	gl_Position = t.v2.x * vertex[0] + t.v2.y * vertex[1] + t.v2.z * vertex[2];
+
+	// Vertex 3
+	gl_Position = phong_tess(t.v2);
 	interpColor = t.v2.x * geom_Color[0] + t.v2.y * geom_Color[1] + t.v2.z * geom_Color[2];
 	EmitVertex();
 	EndPrimitive();
