@@ -259,8 +259,6 @@ reGL3App::WinProc(){
 				// Don't really understand what SDL guys are doing with their key
 				// codes, but ill just do this hack to remove the bitflag so it
 				// can fit in the array
-				if (evt.key.keysym.sym & (1<<30))
-					evt.key.keysym.sym ^= (1<<30);
 				m_input.PressKey(evt.key.keysym.sym);
 				break;
 			case SDL_KEYUP:
