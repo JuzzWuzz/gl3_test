@@ -32,7 +32,11 @@ using namespace reMath;
 #include "main.h"
 
 
-#define PI			(3.14159265358f)
+#define PI					(3.14159265358f)
+#define TECH_BISECT			(0)
+#define TECH_EQUI			(1)
+#define TECH_CENTROID		(2)
+#define TECH_EQUI_BISECT	(3)
 
 void CheckError(string);
 
@@ -60,7 +64,9 @@ ProtoApp::ProtoApp(AppConfig& conf) : reGL3App(conf){
 	m_shMain = NULL;
 	m_shDrawNormals = NULL;
 	m_levels = 0;
+	m_technique = TECH_EQUI;
 	m_rise = .75f;
+	m_geom = 0;
 }
 
 //--------------------------------------------------------
@@ -71,8 +77,8 @@ ProtoApp::~ProtoApp(){
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
-	glDeleteBuffers(4, m_vbo);
-	glDeleteVertexArrays(1, &m_vao);
+	glDeleteBuffers(8, m_vbo);
+	glDeleteVertexArrays(2, m_vao);
 }
 
 //--------------------------------------------------------
@@ -92,7 +98,7 @@ ProtoApp::InitGL(){
 	// init projection matrix
 	float aspect = float(m_config.winWidth)/m_config.winHeight;
 	//m_proj_mat = frustum_proj(-1.0f, 1.0f, -1.f/aspect, 1.f/aspect, .5f, 20.0f);
-	m_proj_mat = perspective_proj(PI*.5f, aspect, .5f, 20.0f);
+	m_proj_mat = perspective_proj(PI*.5f, aspect, .1f, 20.0f);
 
 	// Init Camera
 	m_cam_translate.z = -5.0f;
@@ -116,14 +122,18 @@ ProtoApp::InitGL(){
 	glBindAttribLocation(m_shDrawNormals->m_programID, 2, "in_Normal");
 
 	// NB. must be done after binding attributes
+	printf("compiling shaders...\n");
 	int res = m_shMain->CompileAndLink() && m_shDrawNormals->CompileAndLink();
 	if (!res){
 		printf("Will not continue without working shaders\n");
 		return false;
 	}
+	printf("done\n");
 
+	printf("creating geometry...\n");
 	if (!Init())
 		return false;
+	printf("done\n");
 	return true;
 }
 
@@ -149,31 +159,80 @@ ProtoApp::Init(){
 
 
 	// Create the vertex array
-	glGenVertexArrays(1, &m_vao);
-	glBindVertexArray(m_vao);
+	glGenVertexArrays(1, m_vao);
+	glBindVertexArray(m_vao[0]);
 
 	// Generate three VBOs for vertices, indices, colors
 	glGenBuffers(4, m_vbo);
 
 	// Setup the vertex buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, verts, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 3, verts, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 	// Setup the color buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, colors, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 3, colors, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
 	// Setup the normal buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[2]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, normals, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 3, normals, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(2);
 	// Setup the index buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[3]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 12, inds, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 3, inds, GL_STATIC_DRAW);
 
+	//
+	// THE QUAD PATCH
+
+	const GLfloat verts2[4][3]={
+		{.5f, .0f, .5f},
+		{.5f, .0f, -.5f},
+		{-.5f,.0f, -.5f},
+		{-.5f,.0f,  .5f}
+	};
+	const GLfloat colors2[4][3]={
+		{1.0f, .0f, .0f},
+		{.0f, 1.0f, .0f},
+		{.0f, 1.0f, 1.0f},
+		{.0f, .0f, 1.0f}
+	};
+	const GLfloat normals2[4][3]={
+		{1.0f, 1.0f, 1.0f},
+		{1.0f, 1.0f, -1.0f},
+		{-1.0f, 1.0f, -1.0f},
+		{-1.0f, 1.0f, 1.0f}
+	};
+	const GLubyte inds2[6] = {1,3,0,  3,1,2};
+
+
+	// Create the vertex array
+	glGenVertexArrays(1, m_vao+1);
+	glBindVertexArray(m_vao[1]);
+
+	// Generate three VBOs for vertices, indices, colors
+	glGenBuffers(4, m_vbo+4);
+
+	// Setup the vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[4]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, verts2, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+	// Setup the color buffer
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[5]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, colors2, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+	// Setup the normal buffer
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[6]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, normals2, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(2);
+	// Setup the index buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[7]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 6, inds2, GL_STATIC_DRAW);
 
 	return true;
 }
@@ -228,10 +287,30 @@ ProtoApp::ProcessInput(float dt){
 		m_levels = 1;
 	if (m_input.WasKeyPressed(SDLK_2))
 		m_levels = 2;
+	if (m_input.WasKeyPressed(SDLK_3))
+		m_levels = 3;
+	if (m_input.WasKeyPressed(SDLK_4))
+		m_levels = 4;
+	if (m_input.WasKeyPressed(SDLK_5))
+		m_levels = 5;
+	// height of tessellation
 	if (m_input.WasKeyPressed(SDLK_EQUALS))
 		m_rise+=.05f;
 	if (m_input.WasKeyPressed(SDLK_MINUS))
 		m_rise-=.05f;
+	// tessellation technique
+	if (m_input.WasKeyPressed(SDLK_b))
+		m_technique = TECH_BISECT;
+	else if (m_input.WasKeyPressed(SDLK_e))
+		m_technique = TECH_EQUI;
+	else if (m_input.WasKeyPressed(SDLK_c))
+		m_technique = TECH_CENTROID;
+	else if (m_input.WasKeyPressed(SDLK_t))
+		m_technique = TECH_EQUI_BISECT;
+
+	// Switch to tri/quad patch
+	if (m_input.WasKeyPressed(SDLK_SPACE))
+		m_geom ^= 1;
 
 	reGL3App::ProcessInput(dt);
 }
@@ -252,7 +331,7 @@ ProtoApp::Render(float dt){
 	modelview *= scale_tr(2.0f, 2.0f, 2.0f);
 
 
-	glBindVertexArray(m_vao);
+	glBindVertexArray(m_vao[m_geom]);
 	// Draw the normals
 	glUseProgram(m_shDrawNormals->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shDrawNormals->m_programID, "mvpMatrix"), 1, GL_FALSE,
@@ -262,9 +341,13 @@ ProtoApp::Render(float dt){
 	glUseProgram(m_shMain->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
 			(m_proj_mat*modelview).m);
-	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "levels"), m_levels);
+	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "degree"), m_levels);
+	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "technique"), m_technique);
 	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "rise"), m_rise);
-	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
+	if (m_geom)
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
+	else
+		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
 
 	SDL_GL_SwapWindow(m_pWindow);
 }

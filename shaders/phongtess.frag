@@ -12,7 +12,8 @@ void main(){
 	light = mvpMatrix * light;
 
 	vec4 normal = normalize(interpNormal);
-	frag_Color = interpColor * dot(-light, normal);
-	frag_Color = vec4(dot(-light, normal));
+	//frag_Color = interpColor * dot(-light, normal);
+	//frag_Color = vec4(dot(-light, normal));
+	frag_Color = interpColor;
 }
 

@@ -9,7 +9,8 @@ layout(triangles, max_vertices=108)  out;
 
 // Uniforms (from host code)
 uniform mat4 mvpMatrix;
-uniform int levels;
+uniform int degree;
+uniform int technique;
 uniform float rise;
 
 // Incoming from vertex shader
@@ -29,9 +30,16 @@ struct Triangle{
 void equi_1(int levels, Triangle t);
 void equi_2(int levels, Triangle t);
 void equi_cent(int levels, Triangle t);
+void equi_bisect_1(int levels, Triangle t);
+void equi_bisect_2(int levels, Triangle t);
 void centroid_1(int levels, Triangle t);
 void centroid_2(int levels, Triangle t);
 void centroid_3(int levels, Triangle t);
+void bisect_1(int levels, Triangle t);
+void bisect_2(int levels, Triangle t);
+void bisect_3(int levels, Triangle t);
+void bisect_4(int levels, Triangle t);
+void bisect_5(int levels, Triangle t);
 void make_tri(Triangle t);
 vec4 phong_tess(vec3 v);
 
@@ -54,7 +62,7 @@ void main(){
 	normal[2] = normalize(mvpMatrix * geom_Normal[2]);
 
 	// "Recursively" tessellate triangle
-	if (levels == 0){
+	if (degree == 0){
 		for (i = 0; i < gl_in.length(); i++){
 			gl_Position = vertex[i];
 			interpColor = geom_Color[i];
@@ -68,8 +76,19 @@ void main(){
 		t.v0 = vec3(1.0, .0, .0);
 		t.v1 = vec3(.0, 1.0, .0);
 		t.v2 = vec3(.0, .0, 1.0);
-		
-		equi_1(levels - 1 ,t);
+	
+		if (technique==0){
+			bisect_1(min(5, degree) - 1 ,t);
+		}
+		else if (technique==1){
+			equi_1(min(2,degree) - 1 ,t);
+		}
+		else if (technique==2){
+			centroid_1(min(3,degree) - 1 ,t);
+		}
+		else if (technique==3){
+			equi_bisect_1(min(3, degree) -1,t);
+		}
 	}
 }
 
@@ -313,5 +332,215 @@ void equi_cent(int levels, Triangle t){
 		centroid_1(levels - 1, t_new[1]);
 		centroid_1(levels - 1, t_new[2]);
 		centroid_1(levels - 1, t_new[3]);
+	}
+}
+
+//--------------------------------------------------------
+void equi_bisect_1(int levels, Triangle t){
+	int i, j;
+	Triangle t_new[4];
+	vec3 v01, v12, v20;
+
+	v01 = mix(t.v0, t.v1, .5);
+	v12 = mix(t.v1, t.v2, .5);
+	v20 = mix(t.v2, t.v0, .5);
+
+	t_new[0].v0 = t.v0;
+	t_new[0].v1 = v01;
+	t_new[0].v2 = v20;
+
+	t_new[1].v0 = v01;
+	t_new[1].v1 = t.v1;
+	t_new[1].v2 = v12;
+
+	t_new[2].v0 = v20;
+	t_new[2].v1 = v12;
+	t_new[2].v2 = t.v2;
+
+	t_new[3].v0 = v12;
+	t_new[3].v1 = v20;
+	t_new[3].v2 = v01;
+
+	if (levels==0){
+		for (j = 0; j < 4; j++){
+			make_tri(t_new[j]);
+		}
+	}
+	else{	
+		equi_bisect_2(levels - 1, t_new[0]);
+		equi_bisect_2(levels - 1, t_new[1]);
+		equi_bisect_2(levels - 1, t_new[2]);
+		equi_bisect_2(levels - 1, t_new[3]);
+	}
+}
+
+//--------------------------------------------------------
+void equi_bisect_2(int levels, Triangle t){
+	int i, j;
+	Triangle t_new[4];
+	vec3 v01, v12, v20;
+
+	v01 = mix(t.v0, t.v1, .5);
+	v12 = mix(t.v1, t.v2, .5);
+	v20 = mix(t.v2, t.v0, .5);
+
+
+	t_new[0].v0 = t.v0;
+	t_new[0].v1 = v01;
+	t_new[0].v2 = v20;
+
+	t_new[1].v0 = v01;
+	t_new[1].v1 = t.v1;
+	t_new[1].v2 = v12;
+
+	t_new[2].v0 = v20;
+	t_new[2].v1 = v12;
+	t_new[2].v2 = t.v2;
+
+	t_new[3].v0 = v12;
+	t_new[3].v1 = v20;
+	t_new[3].v2 = v01;
+
+	if (levels==0){
+		for (j = 0; j < 4; j++){
+			make_tri(t_new[j]);
+		}
+	}
+	else{	
+		bisect_5(levels - 1, t_new[0]);
+		bisect_5(levels - 1, t_new[1]);
+		bisect_5(levels - 1, t_new[2]);
+		bisect_5(levels - 1, t_new[3]);
+	}
+}
+
+//--------------------------------------------------------
+void bisect_1(int levels, Triangle t){
+	int i, j;
+	Triangle t_new[2];
+	vec3 v01;
+
+	v01 = mix(t.v0, t.v1, .5);
+
+	t_new[0].v0 = t.v2;
+	t_new[0].v1 = t.v0;
+	t_new[0].v2 = v01;
+
+	t_new[1].v0 = t.v1;
+	t_new[1].v1 = t.v2;
+	t_new[1].v2 = v01;
+
+	if (levels==0){
+		for (j = 0; j < 2; j++){
+			make_tri(t_new[j]);
+		}
+	}
+	else{	
+		bisect_2(levels - 1, t_new[0]);
+		bisect_2(levels - 1, t_new[1]);
+	}
+}
+
+//--------------------------------------------------------
+void bisect_2(int levels, Triangle t){
+	int i, j;
+	Triangle t_new[2];
+	vec3 v01;
+
+	v01 = mix(t.v0, t.v1, .5);
+
+	t_new[0].v0 = t.v2;
+	t_new[0].v1 = t.v0;
+	t_new[0].v2 = v01;
+
+	t_new[1].v0 = t.v1;
+	t_new[1].v1 = t.v2;
+	t_new[1].v2 = v01;
+
+	if (levels==0){
+		for (j = 0; j < 2; j++){
+			make_tri(t_new[j]);
+		}
+	}
+	else{	
+		bisect_3(levels - 1, t_new[0]);
+		bisect_3(levels - 1, t_new[1]);
+	}
+}
+
+//--------------------------------------------------------
+void bisect_3(int levels, Triangle t){
+	int i, j;
+	Triangle t_new[2];
+	vec3 v01;
+
+	v01 = mix(t.v0, t.v1, .5);
+
+	t_new[0].v0 = t.v2;
+	t_new[0].v1 = t.v0;
+	t_new[0].v2 = v01;
+
+	t_new[1].v0 = t.v1;
+	t_new[1].v1 = t.v2;
+	t_new[1].v2 = v01;
+
+	if (levels==0){
+		for (j = 0; j < 2; j++){
+			make_tri(t_new[j]);
+		}
+	}
+	else{	
+		bisect_4(levels - 1, t_new[0]);
+		bisect_4(levels - 1, t_new[1]);
+	}
+}
+
+//--------------------------------------------------------
+void bisect_4(int levels, Triangle t){
+	int i, j;
+	Triangle t_new[2];
+	vec3 v01;
+
+	v01 = mix(t.v0, t.v1, .5);
+
+	t_new[0].v0 = t.v2;
+	t_new[0].v1 = t.v0;
+	t_new[0].v2 = v01;
+
+	t_new[1].v0 = t.v1;
+	t_new[1].v1 = t.v2;
+	t_new[1].v2 = v01;
+
+	if (levels==0){
+		for (j = 0; j < 2; j++){
+			make_tri(t_new[j]);
+		}
+	}
+	else{	
+		bisect_5(levels - 1, t_new[0]);
+		bisect_5(levels - 1, t_new[1]);
+	}
+}
+
+//--------------------------------------------------------
+void bisect_5(int levels, Triangle t){
+	int i, j;
+	Triangle t_new[2];
+	vec3 v01;
+
+	v01 = mix(t.v0, t.v1, .5);
+
+	t_new[0].v0 = t.v2;
+	t_new[0].v1 = t.v0;
+	t_new[0].v2 = v01;
+
+	t_new[1].v0 = t.v1;
+	t_new[1].v1 = t.v2;
+	t_new[1].v2 = v01;
+
+	if (levels==0){
+		for (j = 0; j < 2; j++){
+			make_tri(t_new[j]);
+		}
 	}
 }
