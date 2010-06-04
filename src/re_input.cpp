@@ -27,12 +27,16 @@ Input::Input(){
 }
 
 void Input::PressKey(SDLKey key){
+	if (key & (1<<30))
+		key^=(1<<30);
 	if (key>384) return;
 	m_keydown[key] = true;
 	m_waskeydown[key] = true;
 }
 
 void Input::ReleaseKey(SDLKey key){
+	if (key & (1<<30))
+		key^=(1<<30);
 	if (key>384) return;
 	m_keydown[key] = false;
 }
@@ -62,12 +66,16 @@ void Input::MoveMouse(SDL_MouseMotionEvent evt){
 }
 
 bool Input::WasKeyPressed(SDLKey key){
+	if (key & (1<<30))
+		key^=(1<<30);
 	bool ret = m_waskeydown[key];
 	m_waskeydown[key] = false;
 	return ret;
 }
 
 bool Input::IsKeyPressed(SDLKey key){
+	if (key & (1<<30))
+		key^=(1<<30);
 	return m_keydown[key];
 }
 
