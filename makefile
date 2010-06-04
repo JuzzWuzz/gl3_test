@@ -31,7 +31,7 @@ OUTFILE		= prototype
 # Compiler, Archiver and flags
 CXX			= g++
 AR			= ar
-CFLAGS		= -I$(LIB_SRCDIR)
+CFLAGS		= -I$(LIB_SRCDIR) -Iproto_src/
 LDFLAGS 	= -L/usr/local/lib -Wl,-rpath,/usr/local/lib -lSDL  -lGL -lGLU
 ARFLAGS		= rcs
 

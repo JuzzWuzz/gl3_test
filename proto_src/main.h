@@ -24,6 +24,8 @@ public:
 	matrix4			m_camera_mat;
 	vector3			m_cam_rotate;
 	vector3			m_cam_translate;
+	int				m_levels;	// levels of tessellation
+	float			m_rise;		// percentage of new teseellated vertex to use
 };
 
 

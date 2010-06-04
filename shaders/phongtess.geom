@@ -9,6 +9,8 @@ layout(triangles, max_vertices=108)  out;
 
 // Uniforms (from host code)
 uniform mat4 mvpMatrix;
+uniform int levels;
+uniform float rise;
 
 // Incoming from vertex shader
 in vec4 geom_Color[3];
@@ -40,7 +42,6 @@ vec4 normal[3];
 
 //--------------------------------------------------------
 void main(){
-	int levels = 2;
 	int i;
 	Triangle t;
 
@@ -57,6 +58,7 @@ void main(){
 		for (i = 0; i < gl_in.length(); i++){
 			gl_Position = vertex[i];
 			interpColor = geom_Color[i];
+			interpNormal= normal[i];
 			EmitVertex();
 		}
 		EndPrimitive();
@@ -85,7 +87,7 @@ vec4 phong_tess(vec3 v){
 	p1 = newvert - dot( newvert - vertex[1], normal[1]) * normal[1];
 	p2 = newvert - dot( newvert - vertex[2], normal[2]) * normal[2];
 
-	return .25*newvert + .75*(a*p0 + b*p1 + c*p2);
+	return (1-rise)*newvert + rise*(a*p0 + b*p1 + c*p2);
 }
 
 //--------------------------------------------------------
@@ -95,16 +97,19 @@ void make_tri (Triangle t){
 	// Vertex 1
 	gl_Position = phong_tess(t.v0);
 	interpColor = t.v0.x * geom_Color[0] + t.v0.y * geom_Color[1] + t.v0.z * geom_Color[2];
+	interpNormal= t.v0.x * normal[0] + t.v0.y * normal[1] + t.v0.z * normal[2];
 	EmitVertex();
 
 	// Vertex 2
 	gl_Position = phong_tess(t.v1);
 	interpColor = t.v1.x * geom_Color[0] + t.v1.y * geom_Color[1] + t.v1.z * geom_Color[2];
+	interpNormal= t.v1.x * normal[0] + t.v1.y * normal[1] + t.v1.z * normal[2];
 	EmitVertex();
 
 	// Vertex 3
 	gl_Position = phong_tess(t.v2);
 	interpColor = t.v2.x * geom_Color[0] + t.v2.y * geom_Color[1] + t.v2.z * geom_Color[2];
+	interpNormal= t.v2.x * normal[0] + t.v2.y * normal[1] + t.v2.z * normal[2];
 	EmitVertex();
 	EndPrimitive();
 }

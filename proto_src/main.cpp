@@ -59,6 +59,8 @@ int main(int argc, char* argv[]){
 ProtoApp::ProtoApp(AppConfig& conf) : reGL3App(conf){
 	m_shMain = NULL;
 	m_shDrawNormals = NULL;
+	m_levels = 0;
+	m_rise = .75f;
 }
 
 //--------------------------------------------------------
@@ -128,8 +130,6 @@ ProtoApp::InitGL(){
 //--------------------------------------------------------
 bool
 ProtoApp::Init(){
-	GLuint m_vbo[4], ibo;
-
 	const GLfloat verts[3][3]={
 		{.5f, .0f, .433f},
 		{.0f, .0f, -.433f},
@@ -221,6 +221,18 @@ ProtoApp::ProcessInput(float dt){
 		}
 	}
 
+	// levels of tessellation
+	if (m_input.WasKeyPressed(SDLK_0))
+		m_levels = 0;
+	if (m_input.WasKeyPressed(SDLK_1))
+		m_levels = 1;
+	if (m_input.WasKeyPressed(SDLK_2))
+		m_levels = 2;
+	if (m_input.WasKeyPressed(SDLK_EQUALS))
+		m_rise+=.05f;
+	if (m_input.WasKeyPressed(SDLK_MINUS))
+		m_rise-=.05f;
+
 	reGL3App::ProcessInput(dt);
 }
 
@@ -243,13 +255,15 @@ ProtoApp::Render(float dt){
 	glBindVertexArray(m_vao);
 	// Draw the normals
 	glUseProgram(m_shDrawNormals->m_programID);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
+	glUniformMatrix4fv(glGetUniformLocation(m_shDrawNormals->m_programID, "mvpMatrix"), 1, GL_FALSE,
 			(m_proj_mat*modelview).m);
 	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
 	// Use the shader program
 	glUseProgram(m_shMain->m_programID);
-	glUniformMatrix4fv(glGetUniformLocation(m_shDrawNormals->m_programID, "mvpMatrix"), 1, GL_FALSE,
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
 			(m_proj_mat*modelview).m);
+	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "levels"), m_levels);
+	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "rise"), m_rise);
 	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
 
 	SDL_GL_SwapWindow(m_pWindow);
