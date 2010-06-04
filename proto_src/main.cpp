@@ -97,7 +97,6 @@ ProtoApp::InitGL(){
 
 	// init projection matrix
 	float aspect = float(m_config.winWidth)/m_config.winHeight;
-	//m_proj_mat = frustum_proj(-1.0f, 1.0f, -1.f/aspect, 1.f/aspect, .5f, 20.0f);
 	m_proj_mat = perspective_proj(PI*.5f, aspect, .1f, 20.0f);
 
 	// Init Camera
