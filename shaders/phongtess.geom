@@ -54,19 +54,19 @@ void main(){
 	Triangle t;
 
 	// calculate transformed vertices and store globally
-	vertex[0] = mvpMatrix * gl_in[0].gl_Position;
-	vertex[1] = mvpMatrix * gl_in[1].gl_Position;
-	vertex[2] = mvpMatrix * gl_in[2].gl_Position;
-	normal[0] = normalize(mvpMatrix * geom_Normal[0]);
-	normal[1] = normalize(mvpMatrix * geom_Normal[1]);
-	normal[2] = normalize(mvpMatrix * geom_Normal[2]);
+	vertex[0] = gl_in[0].gl_Position;
+	vertex[1] = gl_in[1].gl_Position;
+	vertex[2] = gl_in[2].gl_Position;
+	normal[0] = normalize(geom_Normal[0]);
+	normal[1] = normalize(geom_Normal[1]);
+	normal[2] = normalize(geom_Normal[2]);
 
 	// "Recursively" tessellate triangle
 	if (degree == 0){
 		for (i = 0; i < gl_in.length(); i++){
-			gl_Position = vertex[i];
+			gl_Position = mvpMatrix * vertex[i];
 			interpColor = geom_Color[i];
-			interpNormal= normal[i];
+			interpNormal= mvpMatrix * normal[i];
 			EmitVertex();
 		}
 		EndPrimitive();
@@ -114,21 +114,21 @@ void make_tri (Triangle t){
 	vec4 newvert, p0, p1, p2;
 	
 	// Vertex 1
-	gl_Position = phong_tess(t.v0);
+	gl_Position = mvpMatrix * phong_tess(t.v0);
 	interpColor = t.v0.x * geom_Color[0] + t.v0.y * geom_Color[1] + t.v0.z * geom_Color[2];
-	interpNormal= t.v0.x * normal[0] + t.v0.y * normal[1] + t.v0.z * normal[2];
+	interpNormal= mvpMatrix * (t.v0.x * normal[0] + t.v0.y * normal[1] + t.v0.z * normal[2]);
 	EmitVertex();
 
 	// Vertex 2
-	gl_Position = phong_tess(t.v1);
+	gl_Position = mvpMatrix * phong_tess(t.v1);
 	interpColor = t.v1.x * geom_Color[0] + t.v1.y * geom_Color[1] + t.v1.z * geom_Color[2];
-	interpNormal= t.v1.x * normal[0] + t.v1.y * normal[1] + t.v1.z * normal[2];
+	interpNormal= mvpMatrix * (t.v1.x * normal[0] + t.v1.y * normal[1] + t.v1.z * normal[2]);
 	EmitVertex();
 
 	// Vertex 3
-	gl_Position = phong_tess(t.v2);
+	gl_Position = mvpMatrix * phong_tess(t.v2);
 	interpColor = t.v2.x * geom_Color[0] + t.v2.y * geom_Color[1] + t.v2.z * geom_Color[2];
-	interpNormal= t.v2.x * normal[0] + t.v2.y * normal[1] + t.v2.z * normal[2];
+	interpNormal= mvpMatrix * (t.v2.x * normal[0] + t.v2.y * normal[1] + t.v2.z * normal[2]);
 	EmitVertex();
 	EndPrimitive();
 }
