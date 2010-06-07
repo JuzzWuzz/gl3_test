@@ -174,8 +174,8 @@ ProtoApp::Init(){
 	j = 0;
 	for (z = 0; z < nVerts; z++){
 		for (x = 0; x < nVerts; x++){
-			vertices[j].x 	= - GRID_SIZE + x * quadSize;
-			vertices[j].z 	= - GRID_SIZE + z * quadSize;
+			vertices[j].x 	= - GRID_SIZE*.5f + x * quadSize;
+			vertices[j].z 	= - GRID_SIZE*.5f + z * quadSize;
 			colors[j] 		= vector3(.0f, .5f, .7f);
 			texcoords[j].u	= quadCoverage * x;
 			texcoords[j].v	= quadCoverage * z;
@@ -381,6 +381,8 @@ ProtoApp::Render(float dt){
 	glUseProgram(m_shMain->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
 			(m_proj_mat*modelview).m);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "rotateMatrix"), 1, GL_FALSE,
+			m_cam_rotate.m);
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "degree"), m_levels);
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "technique"), m_technique);
 	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "rise"), m_rise);

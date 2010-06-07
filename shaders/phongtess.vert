@@ -1,5 +1,7 @@
 #version 150 core
 
+#define HEIGHT 10.0
+
 uniform sampler2D heightmap;
 uniform float texIncr;
 
@@ -15,7 +17,7 @@ void main(){
 	height = texture2D(heightmap, in_TexCoord).r;
 
 	gl_Position = vec4(in_Position, 1.0);
-	gl_Position.y += height *10.0;
+	gl_Position.y += height *HEIGHT;
 	geom_Color=vec4(in_Color, 1.0);	
 	//geom_Normal = normalize(vec4(in_Normal, .0));
 	left = texture(heightmap, vec2(in_TexCoord.x-texIncr,in_TexCoord.y)).r;

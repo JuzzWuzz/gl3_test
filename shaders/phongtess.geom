@@ -9,6 +9,7 @@ layout(triangles, max_vertices=108)  out;
 
 // Uniforms (from host code)
 uniform mat4 mvpMatrix;
+uniform mat4 rotateMatrix;
 uniform int degree;
 uniform int technique;
 uniform float rise;
@@ -114,21 +115,21 @@ void make_tri (Triangle t){
 	vec4 newvert, p0, p1, p2;
 	
 	// Vertex 1
-	gl_Position = mvpMatrix * phong_tess(t.v0);
+	gl_Position = rotateMatrix * phong_tess(t.v0);
 	interpColor = t.v0.x * geom_Color[0] + t.v0.y * geom_Color[1] + t.v0.z * geom_Color[2];
-	interpNormal= mvpMatrix * (t.v0.x * normal[0] + t.v0.y * normal[1] + t.v0.z * normal[2]);
+	interpNormal= rotateMatrix * (t.v0.x * normal[0] + t.v0.y * normal[1] + t.v0.z * normal[2]);
 	EmitVertex();
 
 	// Vertex 2
-	gl_Position = mvpMatrix * phong_tess(t.v1);
+	gl_Position = rotateMatrix * phong_tess(t.v1);
 	interpColor = t.v1.x * geom_Color[0] + t.v1.y * geom_Color[1] + t.v1.z * geom_Color[2];
-	interpNormal= mvpMatrix * (t.v1.x * normal[0] + t.v1.y * normal[1] + t.v1.z * normal[2]);
+	interpNormal= rotateMatrix * (t.v1.x * normal[0] + t.v1.y * normal[1] + t.v1.z * normal[2]);
 	EmitVertex();
 
 	// Vertex 3
-	gl_Position = mvpMatrix * phong_tess(t.v2);
+	gl_Position = rotateMatrix * phong_tess(t.v2);
 	interpColor = t.v2.x * geom_Color[0] + t.v2.y * geom_Color[1] + t.v2.z * geom_Color[2];
-	interpNormal= mvpMatrix * (t.v2.x * normal[0] + t.v2.y * normal[1] + t.v2.z * normal[2]);
+	interpNormal= rotateMatrix * (t.v2.x * normal[0] + t.v2.y * normal[1] + t.v2.z * normal[2]);
 	EmitVertex();
 	EndPrimitive();
 }
