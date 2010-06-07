@@ -38,7 +38,7 @@ using namespace reMath;
 #define TECH_CENTROID		(2)
 #define TECH_EQUI_BISECT	(3)
 
-void CheckError(string);
+bool CheckError(string);
 
 
 /******************************************************************************
@@ -74,9 +74,9 @@ ProtoApp::~ProtoApp(){
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
-	glDisableVertexAttribArray(3);
-	glDeleteBuffers(5, m_vbo);
+	glDeleteBuffers(4, m_vbo);
 	glDeleteVertexArrays(1, &m_vao);
+	glDeleteTextures(1, &m_heightmap_tex);
 }
 
 //--------------------------------------------------------
@@ -93,6 +93,10 @@ ProtoApp::InitGL(){
 #endif
 
 	glEnable(GL_CULL_FACE);
+	//glEnable(GL_TEXTURE_2D);
+
+	if (!CheckError("Enabling GL settings"))
+		return false;
 
 	// init projection matrix
 	float aspect = float(m_config.winWidth)/m_config.winHeight;
@@ -113,7 +117,7 @@ ProtoApp::InitGL(){
 	// allows the attributes to be declared in any order in the shader.
 	glBindAttribLocation(m_shMain->m_programID, 0, "in_Position");
 	glBindAttribLocation(m_shMain->m_programID, 1, "in_Color");
-	glBindAttribLocation(m_shMain->m_programID, 2, "in_Normal");
+	glBindAttribLocation(m_shMain->m_programID, 2, "in_TexCoord");
 
 	// NB. must be done after binding attributes
 	printf("compiling shaders...\n");
@@ -122,6 +126,11 @@ ProtoApp::InitGL(){
 		printf("Will not continue without working shaders\n");
 		return false;
 	}
+	glUseProgram(m_shMain->m_programID);
+	
+	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "heightmap"),0);
+	if (!CheckError("Creating shaders and setting initial uniforms"))
+		return false;
 	printf("done\n");
 
 	printf("creating geometry...\n");
@@ -151,6 +160,10 @@ ProtoApp::Init(){
 	float quadCoverage = gridCoverage/GRID_DIM;
 	int nVerts = GRID_DIM + 1;
 	m_nIndices = GRID_DIM*GRID_DIM * 2 * 3; 	// quads * 2 tris * 3 verts
+
+	// Tell shader of the tex coord increments
+	glUseProgram(m_shMain->m_programID);
+	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "texIncr"), quadCoverage);
 
 	// Create the Grid
 	vertices = new vector3 [nVerts * nVerts];
@@ -255,6 +268,7 @@ ProtoApp::LoadTexture(GLuint *tex, string filename){
 	// Setup OpenGL texture
 	glGenTextures(1, tex);
 	glBindTexture(GL_TEXTURE_2D, *tex);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -263,12 +277,12 @@ ProtoApp::LoadTexture(GLuint *tex, string filename){
 	if (!CheckError("Setting texture parameters"))
 		return false;
 
-	glTexImage2D(GL_TEXTURE_2D, 0, 1, w, h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, data);
 	
 	if (!CheckError("Copying data to heightmap texture"))
 		return false;
 	free(data);
-	return true
+	return true;
 }
 
 //--------------------------------------------------------
@@ -362,6 +376,7 @@ ProtoApp::Render(float dt){
 
 
 	glBindVertexArray(m_vao);
+	glBindTexture(GL_TEXTURE_2D, m_heightmap_tex);
 	// Use the shader program and setup uniform variables.
 	glUseProgram(m_shMain->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
