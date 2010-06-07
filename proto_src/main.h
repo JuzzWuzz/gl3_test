@@ -1,6 +1,10 @@
 #ifndef _PROTO_MAIN_H
 #define _PROTO_MAIN_H
 
+typedef struct{
+	float u, v;
+} float2;
+
 class ProtoApp : public reGL3App{
 public:
 	ProtoApp(AppConfig& conf);
@@ -14,18 +18,22 @@ private:
 	bool		Init			(void);
 	bool		InitGL			(void);
 
+	bool		LoadTexture		(GLuint *tex, string filename); 
+
 public:
 	ShaderProg*		m_shMain;	// use the provided shader program class
 
-	GLuint			m_vao[2];
-	GLuint			m_vbo[8];	// VBOs for vertices, normals, colors, indices
+	GLuint			m_vao;
+	GLuint			m_vbo[5];	// VBOs for vertices, normals, colors, tex coords, indices
+	GLuint			m_heightmap_tex;
+	int				m_nIndices;
+
 	matrix4			m_proj_mat;
 	matrix4			m_camera_mat;
 	vector3			m_cam_rotate;
 	vector3			m_cam_translate;
 	int				m_levels;	// levels of tessellation
 	int				m_technique;
-	int				m_geom;
 	float			m_rise;		// percentage of new teseellated vertex to use
 };
 

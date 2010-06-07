@@ -65,7 +65,6 @@ ProtoApp::ProtoApp(AppConfig& conf) : reGL3App(conf){
 	m_levels = 0;
 	m_technique = TECH_EQUI;
 	m_rise = .75f;
-	m_geom = 0;
 }
 
 //--------------------------------------------------------
@@ -75,13 +74,15 @@ ProtoApp::~ProtoApp(){
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
-	glDeleteBuffers(8, m_vbo);
-	glDeleteVertexArrays(2, m_vao);
+	glDisableVertexAttribArray(3);
+	glDeleteBuffers(5, m_vbo);
+	glDeleteVertexArrays(1, &m_vao);
 }
 
 //--------------------------------------------------------
 bool
 ProtoApp::InitGL(){
+	CheckError("Before all");
 	if (!reGL3App::InitGL())
 		return false;
 #ifdef _WIN32
@@ -95,7 +96,7 @@ ProtoApp::InitGL(){
 
 	// init projection matrix
 	float aspect = float(m_config.winWidth)/m_config.winHeight;
-	m_proj_mat = perspective_proj(PI*.5f, aspect, .1f, 20.0f);
+	m_proj_mat = perspective_proj(PI*.5f, aspect, .5f, 50.0f);
 
 	// Init Camera
 	m_cam_translate.z = -5.0f;
@@ -133,103 +134,142 @@ ProtoApp::InitGL(){
 //--------------------------------------------------------
 bool
 ProtoApp::Init(){
-	const GLfloat verts[3][3]={
-		{.5f, .0f, .433f},
-		{.0f, .0f, -.433f},
-		{-.5f,.0f, .433f}
-	};
-	const GLfloat colors[3][3]={
-		{1.0f, .0f, .0f},
-		{.0f, 1.0f, .0f},
-		{.0f, .0f, 1.0f}
-	};
-	const GLfloat normals[3][3]={
-		{1.0f, 1.0f, 1.0f},
-		{.0f, 1.0f, -1.0f},
-		{-1.0f, 1.0f, 1.0f}
-	};
-	const GLubyte inds[3] = {0,1,2};
+	vector3* vertices;
+	vector3* colors;
+	float2*	 texcoords;
+	GLushort* indices;
+	int i,j,x,z;
 
+	// Just some scaling settings
+	// 1 unit = 1 metre
+	const float HMAP_SIZE = 100.0f;		// heightmap is 100m x 100m
+	const float GRID_SIZE = 50.0f;		// visible grid is 50m x 50m
+	const int	GRID_DIM  = 100;		// 100x100 quads in 50m x 50m grid area => quad = .5m x .5m
+
+	float quadSize	   = GRID_SIZE/GRID_DIM;
+	float gridCoverage = GRID_SIZE/HMAP_SIZE;	// percentage of full map => texture coord range
+	float quadCoverage = gridCoverage/GRID_DIM;
+	int nVerts = GRID_DIM + 1;
+	m_nIndices = GRID_DIM*GRID_DIM * 2 * 3; 	// quads * 2 tris * 3 verts
+
+	// Create the Grid
+	vertices = new vector3 [nVerts * nVerts];
+	colors   = new vector3 [nVerts * nVerts];
+	texcoords= new float2  [nVerts * nVerts];
+	indices  = new GLushort[m_nIndices]; 
+	i = 0;
+	j = 0;
+	for (z = 0; z < nVerts; z++){
+		for (x = 0; x < nVerts; x++){
+			vertices[j].x 	= - GRID_SIZE + x * quadSize;
+			vertices[j].z 	= - GRID_SIZE + z * quadSize;
+			colors[j] 		= vector3(.0f, .5f, .7f);
+			texcoords[j].u	= quadCoverage * x;
+			texcoords[j].v	= quadCoverage * z;
+			if (x > 0 && z > 0){
+				indices[i++] = j-1;
+				indices[i++] = j-nVerts;
+				indices[i++] = j-nVerts-1;
+
+				indices[i++] = j-nVerts;
+				indices[i++] = j-1;
+				indices[i++] = j;
+			}
+			j++;
+		}
+	}
+
+
+	// Load heightmap
+	printf("\tloading heightmap...\n");
+	if (!LoadTexture(&m_heightmap_tex, "images/heightmaps/hmap01.pgm"))
+		return false;
+	printf("\tdone\n");
 
 	// Create the vertex array
-	glGenVertexArrays(1, m_vao);
-	glBindVertexArray(m_vao[0]);
+	glGenVertexArrays(1, &m_vao);
+	glBindVertexArray(m_vao);
 
-	// Generate three VBOs for vertices, indices, colors
+	// Generate four VBOs for vertices, colors, normals, texture coordinates and indices
 	glGenBuffers(4, m_vbo);
 
 	// Setup the vertex buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 3, verts, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * nVerts*nVerts, vertices, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 	// Setup the color buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 3, colors, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * nVerts*nVerts, colors, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
-	// Setup the normal buffer
+	// Setup the texcoord buffer
 	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[2]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 3, normals, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float2) * nVerts*nVerts, texcoords, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)2, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(2);
 	// Setup the index buffer
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[3]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 3, inds, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * m_nIndices, indices, GL_STATIC_DRAW);
 
-	//
-	// THE QUAD PATCH
-
-	const GLfloat verts2[4][3]={
-		{.5f, .0f, .5f},
-		{.5f, .0f, -.5f},
-		{-.5f,.0f, -.5f},
-		{-.5f,.0f,  .5f}
-	};
-	const GLfloat colors2[4][3]={
-		{1.0f, .0f, .0f},
-		{.0f, 1.0f, .0f},
-		{.0f, 1.0f, 1.0f},
-		{.0f, .0f, 1.0f}
-	};
-	const GLfloat normals2[4][3]={
-		{1.0f, 1.0f, 1.0f},
-		{1.0f, 1.0f, -1.0f},
-		{-1.0f, 1.0f, -1.0f},
-		{-1.0f, 1.0f, 1.0f}
-	};
-	const GLubyte inds2[6] = {1,3,0,  3,1,2};
-
-
-	// Create the vertex array
-	glGenVertexArrays(1, m_vao+1);
-	glBindVertexArray(m_vao[1]);
-
-	// Generate three VBOs for vertices, indices, colors
-	glGenBuffers(4, m_vbo+4);
-
-	// Setup the vertex buffer
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[4]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, verts2, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
-	// Setup the color buffer
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[5]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, colors2, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(1);
-	// Setup the normal buffer
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[6]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 3 * 4, normals2, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(2);
-	// Setup the index buffer
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[7]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * 6, inds2, GL_STATIC_DRAW);
+	delete[] vertices;
+	delete[] colors;
+	delete[] texcoords;
+	delete[] indices;
 
 	return true;
 }
 
+//--------------------------------------------------------
+// LOADTEXTURE loads a heightmap from a pgm file into the given texture name.  It assumes there are
+// no comment lines in the file.  The texture has a byte per texel.
+bool
+ProtoApp::LoadTexture(GLuint *tex, string filename){
+	FILE* pFile;
+	GLubyte *data;
+	int w, h, max;
+	char magicnumber[4]={0};
+	int i;
+
+	// Load heightmap data
+	pFile  = fopen(filename.c_str(),"r");
+	
+	if (!pFile){
+		fprintf(stderr, "File not found, or cannot open it: %s\n", filename.c_str());
+		return false;
+	}
+	fread(magicnumber, 1, 3, pFile);
+	if (strcmp(magicnumber, "P2\n")){
+		fprintf(stderr, "Incorrect magic number %s should be P2\n", magicnumber);
+		return false;
+	}
+	fscanf(pFile,"%d %d %d", &w, &h, &max);
+
+	data = (GLubyte*)malloc(w*h);
+
+	for (i = 0 ; i < w*h; i++)
+		fscanf(pFile,"%d", (int*)(data+i));
+
+	fclose(pFile);
+
+	// Setup OpenGL texture
+	glGenTextures(1, tex);
+	glBindTexture(GL_TEXTURE_2D, *tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	if (!CheckError("Setting texture parameters"))
+		return false;
+
+	glTexImage2D(GL_TEXTURE_2D, 0, 1, w, h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
+	
+	if (!CheckError("Copying data to heightmap texture"))
+		return false;
+	free(data);
+	return true
+}
 
 //--------------------------------------------------------
 void
@@ -301,10 +341,6 @@ ProtoApp::ProcessInput(float dt){
 	else if (m_input.WasKeyPressed(SDLK_t))
 		m_technique = TECH_EQUI_BISECT;
 
-	// Switch to tri/quad patch
-	if (m_input.WasKeyPressed(SDLK_SPACE))
-		m_geom ^= 1;
-
 	reGL3App::ProcessInput(dt);
 }
 
@@ -321,10 +357,11 @@ ProtoApp::Render(float dt){
 
 	matrix4 modelview(m_camera_mat);
 
-	modelview *= scale_tr(2.0f, 2.0f, 2.0f);
+	//modelview *= scale_tr(2.0f, 2.0f, 2.0f);
+	modelview *= translate_tr(.0f, -.5f, .0f);
 
 
-	glBindVertexArray(m_vao[m_geom]);
+	glBindVertexArray(m_vao);
 	// Use the shader program and setup uniform variables.
 	glUseProgram(m_shMain->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
@@ -333,20 +370,17 @@ ProtoApp::Render(float dt){
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "technique"), m_technique);
 	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "rise"), m_rise);
 	// Depending on state, draw triangle or quad patch
-	if (m_geom)
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
-	else
-		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
+	glDrawElements(GL_TRIANGLES, m_nIndices, GL_UNSIGNED_SHORT, 0);
 
 	SDL_GL_SwapWindow(m_pWindow);
 }
 
 //--------------------------------------------------------
-void CheckError(string text){
+bool CheckError(string text){
 	GLuint err = glGetError();
 
 	if (err!=GL_NO_ERROR){
-		printf("OpenGL Error: ");
+		fprintf(stderr, "OpenGL Error: ");
 		switch(err){
 			case GL_INVALID_ENUM:
 				fprintf(stderr, "Invalid Enum  ");
@@ -365,5 +399,7 @@ void CheckError(string text){
 				break;
 		}
 		printf ("[%s]\n", text.c_str());
+		return false;
 	}
+	return true;
 }
