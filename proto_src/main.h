@@ -16,7 +16,6 @@ private:
 
 public:
 	ShaderProg*		m_shMain;	// use the provided shader program class
-	ShaderProg*		m_shDrawNormals;
 
 	GLuint			m_vao[2];
 	GLuint			m_vbo[8];	// VBOs for vertices, normals, colors, indices

@@ -62,7 +62,6 @@ int main(int argc, char* argv[]){
 //--------------------------------------------------------
 ProtoApp::ProtoApp(AppConfig& conf) : reGL3App(conf){
 	m_shMain = NULL;
-	m_shDrawNormals = NULL;
 	m_levels = 0;
 	m_technique = TECH_EQUI;
 	m_rise = .75f;
@@ -73,7 +72,6 @@ ProtoApp::ProtoApp(AppConfig& conf) : reGL3App(conf){
 ProtoApp::~ProtoApp(){
 	glUseProgram(0);
 	RE_DELETE(m_shMain);
-	RE_DELETE(m_shDrawNormals);
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
@@ -109,20 +107,16 @@ ProtoApp::InitGL(){
 	// Init Shaders
 	// Get the Shaders to Compile
 	m_shMain = new ShaderProg("shaders/phongtess.vert","shaders/phongtess.geom","shaders/phongtess.frag");
-	m_shDrawNormals = new ShaderProg("shaders/phongtess.vert","shaders/normals.geom","shaders/phongtess.frag");
 
 	// Bind attributes to shader variables. NB = must be done before linking shader
 	// allows the attributes to be declared in any order in the shader.
 	glBindAttribLocation(m_shMain->m_programID, 0, "in_Position");
 	glBindAttribLocation(m_shMain->m_programID, 1, "in_Color");
 	glBindAttribLocation(m_shMain->m_programID, 2, "in_Normal");
-	glBindAttribLocation(m_shDrawNormals->m_programID, 0, "in_Position");
-	glBindAttribLocation(m_shDrawNormals->m_programID, 1, "in_Color");
-	glBindAttribLocation(m_shDrawNormals->m_programID, 2, "in_Normal");
 
 	// NB. must be done after binding attributes
 	printf("compiling shaders...\n");
-	int res = m_shMain->CompileAndLink() && m_shDrawNormals->CompileAndLink();
+	int res = m_shMain->CompileAndLink();
 	if (!res){
 		printf("Will not continue without working shaders\n");
 		return false;
@@ -331,18 +325,14 @@ ProtoApp::Render(float dt){
 
 
 	glBindVertexArray(m_vao[m_geom]);
-	// Draw the normals
-	glUseProgram(m_shDrawNormals->m_programID);
-	glUniformMatrix4fv(glGetUniformLocation(m_shDrawNormals->m_programID, "mvpMatrix"), 1, GL_FALSE,
-			(m_proj_mat*modelview).m);
-	glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_BYTE, 0);
-	// Use the shader program
+	// Use the shader program and setup uniform variables.
 	glUseProgram(m_shMain->m_programID);
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
 			(m_proj_mat*modelview).m);
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "degree"), m_levels);
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "technique"), m_technique);
 	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "rise"), m_rise);
+	// Depending on state, draw triangle or quad patch
 	if (m_geom)
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
 	else
