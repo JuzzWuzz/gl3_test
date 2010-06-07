@@ -52,7 +52,7 @@ $(LIB_BINDIR)%.o : $(LIB_SRCDIR)%.cpp $(LIB_SRCDIR)%.h
 
 $(BINDIR)%.o : $(SRCDIR)%.cpp
 	mkdir -p $(BINDIR)
-	$(CXX) $(CFLAGS) -g -c $< -o $@
+	$(CXX) $(CFLAGS) -O2 -c $< -o $@
 
 # makes a library archive for regl3, copying it and the necessary headers to dist directory
 $(DISTDIR)$(LIBNAME): $(LIB_OBJ)

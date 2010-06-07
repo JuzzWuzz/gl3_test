@@ -50,6 +50,7 @@ int main(int argc, char* argv[]){
 	conf.gl_major = 3;
 	conf.gl_minor = 2;
 	conf.fsaa=4;
+	conf.sleepTime = .01f;
 	ProtoApp test(conf);
 	
 	if (!test.Start())
@@ -164,6 +165,7 @@ ProtoApp::Init(){
 	// Tell shader of the tex coord increments
 	glUseProgram(m_shMain->m_programID);
 	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "texIncr"), quadCoverage);
+	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "quadSize"), quadSize);
 
 	// Create the Grid
 	vertices = new vector3 [nVerts * nVerts];
@@ -195,7 +197,7 @@ ProtoApp::Init(){
 
 	// Load heightmap
 	printf("\tloading heightmap...\n");
-	if (!LoadTexture(&m_heightmap_tex, "images/heightmaps/hmap01.pgm"))
+	if (!LoadTexture(&m_heightmap_tex, "images/heightmaps/hmap02.pgm"))
 		return false;
 	printf("\tdone\n");
 
@@ -370,19 +372,17 @@ ProtoApp::Render(float dt){
 
 
 	matrix4 modelview(m_camera_mat);
+	matrix4 rotate;
 
-	//modelview *= scale_tr(2.0f, 2.0f, 2.0f);
-	modelview *= translate_tr(.0f, -.5f, .0f);
 
+	rotate = rotate_tr(m_cam_rotate.x, 1.0f, .0f, .0f) * rotate_tr(m_cam_rotate.y, .0f, 1.0f, .0f);
 
 	glBindVertexArray(m_vao);
 	glBindTexture(GL_TEXTURE_2D, m_heightmap_tex);
 	// Use the shader program and setup uniform variables.
 	glUseProgram(m_shMain->m_programID);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "mvpMatrix"), 1, GL_FALSE,
-			(m_proj_mat*modelview).m);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "rotateMatrix"), 1, GL_FALSE,
-			m_cam_rotate.m);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "rotprojMatrix"), 1, GL_FALSE,
+			(m_proj_mat*rotate).m);
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "degree"), m_levels);
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "technique"), m_technique);
 	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "rise"), m_rise);
