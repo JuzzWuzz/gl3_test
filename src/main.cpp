@@ -182,10 +182,6 @@ TestApp::Render(float dt){
 	glBindVertexArray(m_vao);
 	glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_BYTE, 0);
 
-	glAccum(GL_MULT, .8f);
-	glAccum(GL_ACCUM, .3f);
-	glAccum(GL_RETURN, 1.0f);
-
 	SDL_GL_SwapWindow(m_pWindow);
 }
 

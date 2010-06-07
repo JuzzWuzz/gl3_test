@@ -143,8 +143,6 @@ reGL3App::InitGL(){
 	glClearColor(.0f, .0f, .0f, .0f);
 	glClearDepth(1.0f);
 
-	glClear(GL_ACCUM_BUFFER_BIT);
-
 	glEnable(GL_DEPTH_TEST);
 
 	glViewport(0, 0, m_config.winWidth, m_config.winHeight);
