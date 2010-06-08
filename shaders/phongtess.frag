@@ -1,17 +1,17 @@
 #version 150 core
 
 
-in vec4 interpColor;
-in vec4 interpNormal;
+in vec3 interpColor;
+in vec3 interpNormal;
 
 out vec4 frag_Color;
 
 void main(){
-	vec4 light = vec4(.0, -.3, -1.0, 0.0);
+	vec3 light = vec3(.0, -.3, -1.0);
 
-	//vec4 normal = normalize(interpNormal);
-	//frag_Color = interpColor * dot(-light, normal);
+	vec3 normal = normalize(interpNormal);
+	frag_Color = vec4(interpColor * dot(-light, normal),1.0);
 	//frag_Color = vec4(dot(-light, normal));
-	frag_Color = interpColor;
+	//frag_Color = interpColor;
 }
 
