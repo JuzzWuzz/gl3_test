@@ -262,8 +262,11 @@ ProtoApp::LoadTexture(GLuint *tex, string filename){
 
 	data = (GLubyte*)malloc(w*h);
 
-	for (i = 0 ; i < w*h; i++)
-		fscanf(pFile,"%d", (int*)(data+i));
+	for (i = 0 ; i < w*h; i++){
+		int tmp;
+		fscanf(pFile,"%d", &tmp);
+		data[i] = (GLubyte)tmp;
+	}
 
 	fclose(pFile);
 
