@@ -8,6 +8,7 @@ layout(triangles) in;
 layout(triangles, max_vertices=108)  out;
 
 // Uniforms (from host code)
+uniform sampler2D heightmap;
 uniform mat4 rotprojMatrix;
 uniform int degree;
 uniform int technique;
@@ -16,6 +17,7 @@ uniform float rise;
 // Incoming from vertex shader
 in vec4 geom_Color[3];
 in vec4 geom_Normal[3];
+in vec2 geom_TexCoord[3];
 
 // Outgoing per-vertex information
 out vec3 interpColor;
@@ -41,7 +43,7 @@ void bisect_3(int levels, Triangle t);
 void bisect_4(int levels, Triangle t);
 void bisect_5(int levels, Triangle t);
 void make_tri(Triangle t);
-vec4 phong_tess(vec3 v);
+vec4 vert_interp(vec3 v);
 
 
 // Globals
@@ -93,20 +95,22 @@ void main(){
 }
 
 //--------------------------------------------------------
-vec4 phong_tess(vec3 v){
-	vec4 newvert, p0, p1, p2;
+vec4 vert_interp(vec3 v){
+	vec4 newvert;
+	vec2 interpTexCoord;
 	float a,b,c;
 
+	// barycentric parameters
 	a = v.x;
 	b = v.y;
 	c = v.z;
 
 	newvert = a * vertex[0] + b * vertex[1] + c * vertex[2];
-	p0 = newvert - dot( newvert - vertex[0], normal[0]) * normal[0];
-	p1 = newvert - dot( newvert - vertex[1], normal[1]) * normal[1];
-	p2 = newvert - dot( newvert - vertex[2], normal[2]) * normal[2];
+	// compute texture coordinates
+	interpTexCoord = a * geom_TexCoord[0] + b * geom_TexCoord[1] + c * geom_TexCoord[2];
+	newvert.y = 10.0*texture2D(heightmap, interpTexCoord).r-10.0;
 
-	return (1-rise)*newvert + rise*(a*p0 + b*p1 + c*p2);
+	return newvert;
 }
 
 //--------------------------------------------------------
@@ -114,19 +118,19 @@ void make_tri (Triangle t){
 	vec4 newvert, p0, p1, p2;
 	
 	// Vertex 1
-	gl_Position = rotprojMatrix * phong_tess(t.v0);
+	gl_Position = rotprojMatrix * vert_interp(t.v0);
 	interpColor = (t.v0.x * geom_Color[0] + t.v0.y * geom_Color[1] + t.v0.z * geom_Color[2]).xyz;
 	interpNormal= (t.v0.x * normal[0] + t.v0.y * normal[1] + t.v0.z * normal[2]).xyz;
 	EmitVertex();
 
 	// Vertex 2
-	gl_Position = rotprojMatrix * phong_tess(t.v1);
+	gl_Position = rotprojMatrix * vert_interp(t.v1);
 	interpColor = (t.v1.x * geom_Color[0] + t.v1.y * geom_Color[1] + t.v1.z * geom_Color[2]).xyz;
 	interpNormal= (t.v1.x * normal[0] + t.v1.y * normal[1] + t.v1.z * normal[2]).xyz;
 	EmitVertex();
 
 	// Vertex 3
-	gl_Position = rotprojMatrix * phong_tess(t.v2);
+	gl_Position = rotprojMatrix * vert_interp(t.v2);
 	interpColor = (t.v2.x * geom_Color[0] + t.v2.y * geom_Color[1] + t.v2.z * geom_Color[2]).xyz;
 	interpNormal= (t.v2.x * normal[0] + t.v2.y * normal[1] + t.v2.z * normal[2]).xyz;
 	EmitVertex();

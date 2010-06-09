@@ -11,19 +11,20 @@ in vec3 in_Position;
 in vec2 in_TexCoord;
 out vec4 geom_Color;
 out vec4 geom_Normal;
+out vec2 geom_TexCoord;
 
 void main(){
 	float height, camera_height;
 	float left, right, top, bottom;
 	vec3 binormal, tangent;
 
-	camera_height = texture2D(heightmap, vec2(.5,.5)).r + 1.0;
+	//camera_height = texture2D(heightmap, vec2(.5,.5)).r + 1.0;
+	camera_height = 1.0;
 	height = texture2D(heightmap, in_TexCoord).r - camera_height;
 
 	gl_Position = vec4(in_Position, 1.0);
 	gl_Position.y += height *HEIGHT;
 	geom_Color=vec4(in_Color, 1.0);	
-	//geom_Normal = normalize(vec4(in_Normal, .0));
 	
 	left = texture2D(heightmap, 	vec2(in_TexCoord.s-texIncr,in_TexCoord.t)).r;
 	right = texture2D(heightmap, 	vec2(in_TexCoord.s+texIncr,in_TexCoord.t)).r;
@@ -38,5 +39,6 @@ void main(){
 	binormal.z = .0;
 
 	geom_Normal = normalize(vec4(cross(tangent, binormal), .0));
+	geom_TexCoord = in_TexCoord;
 }
 

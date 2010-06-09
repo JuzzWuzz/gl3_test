@@ -83,7 +83,12 @@ ProtoApp::~ProtoApp(){
 //--------------------------------------------------------
 bool
 ProtoApp::InitGL(){
-	CheckError("Before all");
+	int res;
+	char* shVersion;
+	int nVertTexUnits, nGeomTexUnits, nTexUnits, nTexUnitsCombined, nColorAttachments, nTexSize,
+		nTexLayers, nVertAttribs, nGeomVerts, nGeomComponents;
+	float aspect;
+
 	if (!reGL3App::InitGL())
 		return false;
 #ifdef _WIN32
@@ -93,6 +98,31 @@ ProtoApp::InitGL(){
 	}
 #endif
 
+	// Query some Hardware specs
+	shVersion = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+	glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &nTexUnits);
+	glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &nVertTexUnits);
+	glGetIntegerv(GL_MAX_GEOMETRY_TEXTURE_IMAGE_UNITS, &nGeomTexUnits);
+	glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &nTexUnitsCombined);
+	glGetIntegerv(GL_MAX_TEXTURE_SIZE, &nTexSize);
+	glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES, &nGeomVerts);
+	glGetIntegerv(GL_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS, &nGeomComponents);
+	glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &nTexLayers);
+	glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &nColorAttachments);
+	glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nVertAttribs);
+	printf("Supports GLSL version:\t\t%s\n", shVersion);
+	printf("# of texture units:\t\t%d (VS), %d (GS), %d (FS), %d (comb.)\n",nVertTexUnits,
+			nGeomTexUnits, nTexUnits, nTexUnitsCombined);
+	printf("Max texture size:\t\t%d\n", nTexSize);
+	printf("Max output vertices (GS):\t%d\n", nGeomVerts);
+	printf("Max output components:\t\t%d\n", nGeomVerts);
+	printf("Max FBO color attachments:\t%d\n", nColorAttachments);
+	printf("Max array texture layers:\t%d\n", nTexLayers);
+	printf("Max vertex attributes:\t\t%d\n", nVertAttribs);
+
+	printf("-----------------------------------------\n");
+
+
 	glEnable(GL_CULL_FACE);
 	//glEnable(GL_TEXTURE_2D);
 
@@ -100,7 +130,7 @@ ProtoApp::InitGL(){
 		return false;
 
 	// init projection matrix
-	float aspect = float(m_config.winWidth)/m_config.winHeight;
+	aspect = float(m_config.winWidth)/m_config.winHeight;
 	m_proj_mat = perspective_proj(PI*.5f, aspect, .5f, 50.0f);
 
 	// Init Camera
@@ -122,7 +152,7 @@ ProtoApp::InitGL(){
 
 	// NB. must be done after binding attributes
 	printf("compiling shaders...\n");
-	int res = m_shMain->CompileAndLink();
+	res = m_shMain->CompileAndLink();
 	if (!res){
 		printf("Will not continue without working shaders\n");
 		return false;
@@ -197,7 +227,7 @@ ProtoApp::Init(){
 
 	// Load heightmap
 	printf("\tloading heightmap...\n");
-	if (!LoadTexture(&m_heightmap_tex, "images/heightmaps/hmap02.pgm"))
+	if (!LoadHeightmap(&m_heightmap_tex, "images/heightmaps/hmap02.pgm"))
 		return false;
 	printf("\tdone\n");
 
@@ -239,7 +269,7 @@ ProtoApp::Init(){
 // LOADTEXTURE loads a heightmap from a pgm file into the given texture name.  It assumes there are
 // no comment lines in the file.  The texture has a byte per texel.
 bool
-ProtoApp::LoadTexture(GLuint *tex, string filename){
+ProtoApp::LoadHeightmap(GLuint *tex, string filename){
 	FILE* pFile;
 	GLubyte *data;
 	int w, h, max;
