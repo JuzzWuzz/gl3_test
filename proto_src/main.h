@@ -29,6 +29,7 @@ public:
 	GLuint			m_heightmap_tex;
 	GLuint			m_normalmap_tex;
 	int				m_nIndices;
+	float			m_scale_metreToTex;
 
 	matrix4			m_proj_mat;
 	matrix4			m_camera_mat;

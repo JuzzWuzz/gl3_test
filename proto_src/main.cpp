@@ -135,11 +135,7 @@ ProtoApp::InitGL(){
 	m_proj_mat = perspective_proj(PI*.5f, aspect, .5f, 50.0f);
 
 	// Init Camera
-	m_cam_translate.z = -5.0f;
 	m_cam_rotate.x = PI*.1f;
-	m_camera_mat = translate_tr(m_cam_translate.x, m_cam_translate.y, m_cam_translate.z)
-				*	rotate_tr(m_cam_rotate.x, 1.0f, .0f, .0f)
-				*	rotate_tr(m_cam_rotate.y, .0f, 1.0f, .0f);
 
 	// Init Shaders
 	// Get the Shaders to Compile
@@ -194,6 +190,11 @@ ProtoApp::Init(){
 	float quadCoverage = gridCoverage/GRID_DIM;
 	int nVerts = GRID_DIM + 1;
 	m_nIndices = GRID_DIM*GRID_DIM * 2 * 3; 	// quads * 2 tris * 3 verts
+
+	// Initialize camera start position and scale
+	m_scale_metreToTex = 1.0f/HMAP_SIZE;
+	m_cam_translate.x = HMAP_SIZE*.5f;
+	m_cam_translate.z = HMAP_SIZE*.5f;
 
 	// Tell shader of the tex coord increments
 	glUseProgram(m_shMain->m_programID);
@@ -373,31 +374,20 @@ void
 ProtoApp::ProcessInput(float dt){
 
 	MouseDelta move = m_input.GetMouseDelta();
-	int zoomTicks = m_input.GetWheelTicks();
 	if (m_input.IsButtonPressed(1)){
 		//pitch
 		m_cam_rotate.x += dt*move.y*PI*.1f;
 		//yaw
 		m_cam_rotate.y += dt*move.x*PI*.1f;
-
-		m_camera_mat = translate_tr(m_cam_translate.x, m_cam_translate.y, m_cam_translate.z)
-					*	rotate_tr(m_cam_rotate.x, 1.0f, .0f, .0f)
-					*	rotate_tr(m_cam_rotate.y, .0f, 1.0f, .0f);
 	}
 	
-	if (zoomTicks){
-		m_cam_translate.z += zoomTicks * dt * 20.0f;
-		m_camera_mat = translate_tr(m_cam_translate.x, m_cam_translate.y, m_cam_translate.z)
-					*	rotate_tr(m_cam_rotate.x, 1.0f, .0f, .0f)
-					*	rotate_tr(m_cam_rotate.y, .0f, 1.0f, .0f);
-	}
-
 	// Toggle mouse grabbinga
 	if (m_input.WasKeyPressed(SDLK_m)){
 		printf("Toggle\n");
 		SDL_WM_GrabInput(SDL_GRAB_ON);
 		SDL_ShowCursor(0);
 	}
+
 	static bool wireframe = false;
 	// Toggle wireframe
 	if (m_input.WasKeyPressed(SDLK_l)){
@@ -438,12 +428,34 @@ ProtoApp::ProcessInput(float dt){
 	else if (m_input.WasKeyPressed(SDLK_t))
 		m_technique = TECH_EQUI_BISECT;
 
+	float speed = 10.0f;
+	if (m_input.IsKeyPressed(SDLK_w)){
+		matrix4 rot = rotate_tr(-m_cam_rotate.y, .0f, 1.0f, .0f);
+		m_cam_translate += rot * vector3(.0f, .0f, -speed) * dt;
+	}
+	if (m_input.IsKeyPressed(SDLK_s)){
+		matrix4 rot = rotate_tr(-m_cam_rotate.y, .0f, 1.0f, .0f);
+		m_cam_translate += rot * vector3(.0f, .0f, speed) * dt;
+	}
+	if (m_input.IsKeyPressed(SDLK_a)){
+		matrix4 rot = rotate_tr(-m_cam_rotate.y, .0f, 1.0f, .0f);
+		m_cam_translate += rot * vector3(-speed, .0f, .0f) * dt;
+	}
+	if (m_input.IsKeyPressed(SDLK_d)){
+		matrix4 rot = rotate_tr(-m_cam_rotate.y, .0f, 1.0f, .0f);
+		m_cam_translate += rot * vector3(speed, .0f, .0f) * dt;
+	}
+
 	reGL3App::ProcessInput(dt);
 }
 
 //--------------------------------------------------------
 void 
 ProtoApp::Logic(float dt){
+	// Update position
+	vector3 pos = m_cam_translate * m_scale_metreToTex;
+	glUseProgram(m_shMain->m_programID);
+	glUniform3f(glGetUniformLocation(m_shMain->m_programID, "camera_pos"), pos.x, pos.y, pos.z);
 }
 
 //--------------------------------------------------------
