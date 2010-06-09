@@ -78,6 +78,7 @@ ProtoApp::~ProtoApp(){
 	glDeleteBuffers(4, m_vbo);
 	glDeleteVertexArrays(1, &m_vao);
 	glDeleteTextures(1, &m_heightmap_tex);
+	glDeleteTextures(1, &m_normalmap_tex);
 }
 
 //--------------------------------------------------------
@@ -157,9 +158,11 @@ ProtoApp::InitGL(){
 		printf("Will not continue without working shaders\n");
 		return false;
 	}
+
+	// Assign samplers to texture units
 	glUseProgram(m_shMain->m_programID);
-	
 	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "heightmap"),0);
+	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "normalmap"),1);
 	if (!CheckError("Creating shaders and setting initial uniforms"))
 		return false;
 	printf("done\n");
@@ -227,7 +230,8 @@ ProtoApp::Init(){
 
 	// Load heightmap
 	printf("\tloading heightmap...\n");
-	if (!LoadHeightmap(&m_heightmap_tex, "images/heightmaps/hmap02.pgm"))
+	if (!LoadHeightmap(&m_heightmap_tex, &m_normalmap_tex, "images/heightmaps/hmap01.pgm",
+				"images/heightmaps/hmap01_normal.ppm"))
 		return false;
 	printf("\tdone\n");
 
@@ -269,12 +273,12 @@ ProtoApp::Init(){
 // LOADTEXTURE loads a heightmap from a pgm file into the given texture name.  It assumes there are
 // no comment lines in the file.  The texture has a byte per texel.
 bool
-ProtoApp::LoadHeightmap(GLuint *tex, string filename){
+ProtoApp::LoadHeightmap(GLuint *tex, GLuint* normal_tex, string filename, string normalmap_filename){
 	FILE* pFile;
 	GLubyte *data;
 	int w, h, max;
 	char magicnumber[4]={0};
-	int i;
+	int i, res;
 
 	// Load heightmap data
 	pFile  = fopen(filename.c_str(),"r");
@@ -283,18 +287,18 @@ ProtoApp::LoadHeightmap(GLuint *tex, string filename){
 		fprintf(stderr, "File not found, or cannot open it: %s\n", filename.c_str());
 		return false;
 	}
-	fread(magicnumber, 1, 3, pFile);
+	res = fread(magicnumber, 1, 3, pFile);
 	if (strcmp(magicnumber, "P2\n")){
 		fprintf(stderr, "Incorrect magic number %s should be P2\n", magicnumber);
 		return false;
 	}
-	fscanf(pFile,"%d %d %d", &w, &h, &max);
+	res = fscanf(pFile,"%d %d %d", &w, &h, &max);
 
 	data = (GLubyte*)malloc(w*h);
 
 	for (i = 0 ; i < w*h; i++){
 		int tmp;
-		fscanf(pFile,"%d", &tmp);
+		res = fscanf(pFile,"%d", &tmp);
 		data[i] = (GLubyte)tmp;
 	}
 
@@ -303,7 +307,6 @@ ProtoApp::LoadHeightmap(GLuint *tex, string filename){
 	// Setup OpenGL texture
 	glGenTextures(1, tex);
 	glBindTexture(GL_TEXTURE_2D, *tex);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -317,6 +320,51 @@ ProtoApp::LoadHeightmap(GLuint *tex, string filename){
 	if (!CheckError("Copying data to heightmap texture"))
 		return false;
 	free(data);
+
+	// Do the same for the normal map, except with three components per texel
+	pFile  = fopen(normalmap_filename.c_str(),"r");
+	
+	if (!pFile){
+		fprintf(stderr, "File not found, or cannot open it: %s\n", normalmap_filename.c_str());
+		return false;
+	}
+	res = fread(magicnumber, 1, 3, pFile);
+	if (strcmp(magicnumber, "P3\n")){
+		fprintf(stderr, "Incorrect magic number %s should be P3\n", magicnumber);
+		return false;
+	}
+	res = fscanf(pFile,"%d %d %d", &w, &h, &max);
+
+	data = (GLubyte*)malloc(w*h*3); // three components per texel
+
+	for (i = 0 ; i < w*h*3; i+=3){
+		int r,g,b;
+		res = fscanf(pFile,"%d %d %d", &r,&g,&b);
+		data[i] 	= (GLubyte)r;
+		data[i+1]	= (GLubyte)g;
+		data[i+2]	= (GLubyte)b;
+	}
+
+	fclose(pFile);
+
+	// Setup OpenGL texture
+	glGenTextures(1, normal_tex);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, *normal_tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	if (!CheckError("Setting normal map texture parameters"))
+		return false;
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	
+	if (!CheckError("Copying data to normalmap texture"))
+		return false;
+	free(data);
+	glActiveTexture(GL_TEXTURE0);
 	return true;
 }
 

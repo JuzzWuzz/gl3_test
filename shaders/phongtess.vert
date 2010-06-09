@@ -3,6 +3,7 @@
 #define HEIGHT 10.0
 
 uniform sampler2D heightmap;
+uniform sampler2D normalmap;
 uniform float texIncr;
 uniform float quadSize;
 
@@ -26,19 +27,9 @@ void main(){
 	gl_Position.y += height *HEIGHT;
 	geom_Color=vec4(in_Color, 1.0);	
 	
-	left = texture2D(heightmap, 	vec2(in_TexCoord.s-texIncr,in_TexCoord.t)).r;
-	right = texture2D(heightmap, 	vec2(in_TexCoord.s+texIncr,in_TexCoord.t)).r;
-	top = texture2D(heightmap, 	vec2(in_TexCoord.s, in_TexCoord.t+texIncr)).r;
-	bottom = texture2D(heightmap, vec2(in_TexCoord.s, in_TexCoord.t-texIncr)).r;
+	// we swizzle the rgb to rbg so that blue represents vertical vector
+	geom_Normal = vec4(normalize(texture2D(normalmap, in_TexCoord).rbg*2.0 - 1.0),.0);
 
-	tangent.x = .0;
-	tangent.y = HEIGHT* (top-bottom);
-	tangent.z = 2*quadSize;
-	binormal.x = 2*quadSize;
-	binormal.y = HEIGHT* (right-left);
-	binormal.z = .0;
-
-	geom_Normal = normalize(vec4(cross(tangent, binormal), .0));
 	geom_TexCoord = in_TexCoord;
 }
 

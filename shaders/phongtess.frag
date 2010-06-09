@@ -7,7 +7,7 @@ in vec3 interpNormal;
 out vec4 frag_Color;
 
 void main(){
-	vec3 light = vec3(.0, -.3, -1.0);
+	vec3 light = normalize(vec3(.0, -.8, -1.0));
 
 	vec3 normal = normalize(interpNormal);
 	frag_Color = vec4(interpColor * dot(-light, normal),1.0);

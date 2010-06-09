@@ -18,7 +18,8 @@ private:
 	bool		Init			(void);
 	bool		InitGL			(void);
 
-	bool		LoadTexture		(GLuint *tex, string filename); 
+	bool		LoadHeightmap	(GLuint *tex, GLuint *normal_tex, string filename, string
+			normalmap_Filename); 
 
 public:
 	ShaderProg*		m_shMain;	// use the provided shader program class
@@ -26,6 +27,7 @@ public:
 	GLuint			m_vao;
 	GLuint			m_vbo[5];	// VBOs for vertices, normals, colors, tex coords, indices
 	GLuint			m_heightmap_tex;
+	GLuint			m_normalmap_tex;
 	int				m_nIndices;
 
 	matrix4			m_proj_mat;

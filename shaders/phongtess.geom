@@ -9,6 +9,7 @@ layout(triangles, max_vertices=108)  out;
 
 // Uniforms (from host code)
 uniform sampler2D heightmap;
+uniform sampler2D normalmap;
 uniform mat4 rotprojMatrix;
 uniform int degree;
 uniform int technique;
@@ -108,7 +109,10 @@ vec4 vert_interp(vec3 v){
 	newvert = a * vertex[0] + b * vertex[1] + c * vertex[2];
 	// compute texture coordinates
 	interpTexCoord = a * geom_TexCoord[0] + b * geom_TexCoord[1] + c * geom_TexCoord[2];
+
+	// sample height and normal from textures
 	newvert.y = 10.0*texture2D(heightmap, interpTexCoord).r-10.0;
+	interpNormal = normalize(texture2D(normalmap, interpTexCoord).rbg*2.0-1.0);
 
 	return newvert;
 }
@@ -120,19 +124,16 @@ void make_tri (Triangle t){
 	// Vertex 1
 	gl_Position = rotprojMatrix * vert_interp(t.v0);
 	interpColor = (t.v0.x * geom_Color[0] + t.v0.y * geom_Color[1] + t.v0.z * geom_Color[2]).xyz;
-	interpNormal= (t.v0.x * normal[0] + t.v0.y * normal[1] + t.v0.z * normal[2]).xyz;
 	EmitVertex();
 
 	// Vertex 2
 	gl_Position = rotprojMatrix * vert_interp(t.v1);
 	interpColor = (t.v1.x * geom_Color[0] + t.v1.y * geom_Color[1] + t.v1.z * geom_Color[2]).xyz;
-	interpNormal= (t.v1.x * normal[0] + t.v1.y * normal[1] + t.v1.z * normal[2]).xyz;
 	EmitVertex();
 
 	// Vertex 3
 	gl_Position = rotprojMatrix * vert_interp(t.v2);
 	interpColor = (t.v2.x * geom_Color[0] + t.v2.y * geom_Color[1] + t.v2.z * geom_Color[2]).xyz;
-	interpNormal= (t.v2.x * normal[0] + t.v2.y * normal[1] + t.v2.z * normal[2]).xyz;
 	EmitVertex();
 	EndPrimitive();
 }
