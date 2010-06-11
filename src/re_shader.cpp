@@ -23,11 +23,15 @@ ShaderProg::ShaderProg(string vertPath, string geomPath, string fragPath){
 	m_programID = glCreateProgram();
 
 	m_vertShID = glCreateShader(GL_VERTEX_SHADER);
-	m_geomShID = glCreateShader(GL_GEOMETRY_SHADER);
+	if (geomPath!="")
+		m_geomShID = glCreateShader(GL_GEOMETRY_SHADER);
+	else
+		m_geomShID = -1;
 	m_fragShID = glCreateShader(GL_FRAGMENT_SHADER);
 
 	vertSource = LoadSource(vertPath);
-	geomSource = LoadSource(geomPath);
+	if (geomPath!="")
+		geomSource = LoadSource(geomPath);
 	fragSource = LoadSource(fragPath);
 
 	vsrc = vertSource.c_str();
@@ -35,7 +39,8 @@ ShaderProg::ShaderProg(string vertPath, string geomPath, string fragPath){
 	fsrc = fragSource.c_str();
 
 	glShaderSource(m_vertShID, 1, (const char**)&vsrc, NULL);
-	glShaderSource(m_geomShID, 1, &gsrc, NULL);
+	if (geomPath!="")
+		glShaderSource(m_geomShID, 1, &gsrc, NULL);
 	glShaderSource(m_fragShID, 1, &fsrc, NULL);
 }
 
@@ -51,7 +56,7 @@ ShaderProg::CompileAndLink(){
 
 	if (!SetupShader(m_vertShID))
 		return 0;
-	if (!SetupShader(m_geomShID))
+	if (m_geomShID>=0 && !SetupShader(m_geomShID))
 		return 0;
 	if (!SetupShader(m_fragShID))
 		return 0;
