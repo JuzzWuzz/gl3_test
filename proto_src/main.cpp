@@ -139,7 +139,7 @@ ProtoApp::InitGL(){
 
 	// Init Shaders
 	// Get the Shaders to Compile
-	m_shMain = new ShaderProg("shaders/phongtess.vert","","shaders/phongtess.frag");
+	m_shMain = new ShaderProg("shaders/juzz.vert","","shaders/juzz.frag");
 
 	// Bind attributes to shader variables. NB = must be done before linking shader
 	// allows the attributes to be declared in any order in the shader.
@@ -474,11 +474,7 @@ ProtoApp::Render(float dt){
 	glBindTexture(GL_TEXTURE_2D, m_heightmap_tex);
 	// Use the shader program and setup uniform variables.
 	glUseProgram(m_shMain->m_programID);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "rotprojMatrix"), 1, GL_FALSE,
-			(m_proj_mat*rotate).m);
-	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "degree"), m_levels);
-	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "technique"), m_technique);
-	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "rise"), m_rise);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "rotprojMatrix"), 1, GL_FALSE, (m_proj_mat*rotate).m);
 	// Depending on state, draw triangle or quad patch
 	glDrawElements(GL_TRIANGLES, m_nIndices, GL_UNSIGNED_SHORT, 0);
 
