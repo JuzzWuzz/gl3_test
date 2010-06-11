@@ -139,7 +139,7 @@ ProtoApp::InitGL(){
 
 	// Init Shaders
 	// Get the Shaders to Compile
-	m_shMain = new ShaderProg("shaders/phongtess.vert","shaders/phongtess.geom","shaders/phongtess.frag");
+	m_shMain = new ShaderProg("shaders/phongtess.vert","","shaders/phongtess.frag");
 
 	// Bind attributes to shader variables. NB = must be done before linking shader
 	// allows the attributes to be declared in any order in the shader.
