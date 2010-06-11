@@ -55,7 +55,7 @@ int main(int argc, char* argv[]){
 	
 	if (!test.Start())
 		printf("Application failed to start\n");
-
+	Sleep(10000);
 	return 0;
 }
 
