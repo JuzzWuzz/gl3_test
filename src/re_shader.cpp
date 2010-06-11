@@ -23,25 +23,25 @@ ShaderProg::ShaderProg(string vertPath, string geomPath, string fragPath){
 	m_programID = glCreateProgram();
 
 	m_vertShID = glCreateShader(GL_VERTEX_SHADER);
-	if (geomPath!="")
+	m_fragShID = glCreateShader(GL_FRAGMENT_SHADER);
+	if (geomPath != "")
 		m_geomShID = glCreateShader(GL_GEOMETRY_SHADER);
 	else
 		m_geomShID = -1;
-	m_fragShID = glCreateShader(GL_FRAGMENT_SHADER);
 
 	vertSource = LoadSource(vertPath);
-	if (geomPath!="")
-		geomSource = LoadSource(geomPath);
 	fragSource = LoadSource(fragPath);
+	if (geomPath != "")
+		geomSource = LoadSource(geomPath);
 
 	vsrc = vertSource.c_str();
 	gsrc = geomSource.c_str();
 	fsrc = fragSource.c_str();
 
 	glShaderSource(m_vertShID, 1, (const char**)&vsrc, NULL);
-	if (geomPath!="")
-		glShaderSource(m_geomShID, 1, &gsrc, NULL);
 	glShaderSource(m_fragShID, 1, &fsrc, NULL);
+	if (geomPath != "")
+		glShaderSource(m_geomShID, 1, &gsrc, NULL);
 }
 
 //--------------------------------------------------------
@@ -56,9 +56,9 @@ ShaderProg::CompileAndLink(){
 
 	if (!SetupShader(m_vertShID))
 		return 0;
-	if (m_geomShID>=0 && !SetupShader(m_geomShID))
-		return 0;
 	if (!SetupShader(m_fragShID))
+		return 0;
+	if (!SetupShader(m_geomShID))
 		return 0;
 	
 	// Link shaders together
@@ -76,12 +76,16 @@ ShaderProg::CompileAndLink(){
 //--------------------------------------------------------
 int
 ShaderProg::SetupShader(GLuint id){
+	//If shader is disabled then return
+	if (id == -1)
+		return 1;
+
 	GLint res;
 
 	// Compile
 	glCompileShader(id);
 	glGetShaderiv(id, GL_COMPILE_STATUS, &res);
-	if (res==GL_FALSE){
+	if (res == GL_FALSE){
 		fprintf(stderr, "Could not compile shader.\n");
 		PrintShaderLog(id);
 		return 0;
