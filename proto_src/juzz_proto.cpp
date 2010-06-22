@@ -77,7 +77,7 @@ bool juzz_proto::InitGL()
 
 	//Setup camera projection matrix and aspect ratio
 	aspect = float(m_config.winWidth) / (float)m_config.winHeight;
-	cameraProjection = perspective_proj(PI * 0.5f, aspect, 0.1f, 50.0f);
+	cameraProjection = perspective_proj(PI * 0.5f, aspect, 0.1f, 100.0f);
 
 	//Init Camera
 	cameraRotation.x = 0;
@@ -129,17 +129,19 @@ bool juzz_proto::InitGL()
 //Initialisation method to setup the program
 bool juzz_proto::Init()
 {
+	angle = 0.0f;
+
 	//The eight verticies for a cube
 	vector3 verts[8];
 	//Front
 	//Top Left
-	verts[0][0] = -1.0f;
+	verts[0][0] = -10.0f;
 	verts[0][1] = 1.0f;
-	verts[0][2] = 1.0f;
+	verts[0][2] = 10.0f;
 	//Top Right
-	verts[1][0] = 1.0f;
+	verts[1][0] = 10.0f;
 	verts[1][1] = 1.0f;
-	verts[1][2] = 1.0f;
+	verts[1][2] = 10.0f;
 	//Bottom Right
 	verts[2][0] = 1.0f;
 	verts[2][1] = -1.0f;
@@ -150,13 +152,13 @@ bool juzz_proto::Init()
 	verts[3][2] = 1.0f;
 	//Back
 	//Top Left
-	verts[4][0] = -1.0f;
+	verts[4][0] = -10.0f;
 	verts[4][1] = 1.0f;
-	verts[4][2] = -1.0f;
+	verts[4][2] = -10.0f;
 	//Top Right
-	verts[5][0] = 1.0f;
+	verts[5][0] = 10.0f;
 	verts[5][1] = 1.0f;
-	verts[5][2] = -1.0f;
+	verts[5][2] = -10.0f;
 	//Bottom Right
 	verts[6][0] = 1.0f;
 	verts[6][1] = -1.0f;
@@ -193,6 +195,55 @@ bool juzz_proto::Init()
 	cols[5][2] = 1.0f;
 
 	//Constructs the cube based on the 8 verticies, 6 quads with 2 tris / quad
+	/*verticies = new vector3[36];
+	//Front face
+	verticies[0] = verts[2];
+	verticies[1] = verts[1];
+	verticies[2] = verts[0];
+	verticies[3] = verts[0];
+	verticies[4] = verts[3];
+	verticies[5] = verts[2];
+
+	//Right face
+	verticies[6] = verts[6];
+	verticies[7] = verts[5];
+	verticies[8] = verts[1];
+	verticies[9] = verts[1];
+	verticies[10] = verts[2];
+	verticies[11] = verts[6];
+
+	//Back face
+	verticies[12] = verts[7];
+	verticies[13] = verts[4];
+	verticies[14] = verts[5];
+	verticies[15] = verts[5];
+	verticies[16] = verts[6];
+	verticies[17] = verts[7];
+
+	//Left face
+	verticies[18] = verts[3];
+	verticies[19] = verts[0];
+	verticies[20] = verts[4];
+	verticies[21] = verts[4];
+	verticies[22] = verts[7];
+	verticies[23] = verts[3];
+
+	//Top face
+	verticies[24] = verts[1];
+	verticies[25] = verts[5];
+	verticies[26] = verts[4];
+	verticies[27] = verts[4];
+	verticies[28] = verts[0];
+	verticies[29] = verts[1];
+
+	//Bottom face
+	verticies[30] = verts[6];
+	verticies[31] = verts[2];
+	verticies[32] = verts[3];
+	verticies[33] = verts[3];
+	verticies[34] = verts[7];
+	verticies[35] = verts[6];*/
+
 	vector3 verticies[36] =
 	{
 		//Front face
@@ -241,7 +292,7 @@ bool juzz_proto::Init()
 		verts[3],
 		verts[3],
 		verts[7],
-		verts[6],
+		verts[6]
 	};
 
 	//The colours
@@ -296,7 +347,22 @@ bool juzz_proto::Init()
 		cols[5],
 	};
 
+	//Calculate the normals for the cube
+	//normals = new vector3[36];
+	//CalculateNormals(verticies, 36, normals);
 	vector3 normals[36];
+	for (int i = 0; i < 36 / 3; i++)
+	{
+		int a = i * 3;
+		int b = a + 1;
+		int c = b + 1;
+		normals[a] = (verticies[b] - verticies[a]).Cross(verticies[c] - verticies[a]);
+		normals[b] = (verticies[c] - verticies[b]).Cross(verticies[a] - verticies[b]);
+		normals[c] = (verticies[a] - verticies[c]).Cross(verticies[b] - verticies[c]);
+		normals[a].Normalize();
+		normals[b].Normalize();
+		normals[c].Normalize();
+	}
 
 	//Indicies
 	numOfIndices = 36;
@@ -305,12 +371,12 @@ bool juzz_proto::Init()
 	{
 		inds[i] = i;
 	}
-
-	// Create the vertex array
+	
+	//Create the vertex array
 	glGenVertexArrays(1, &cubeVAO);
 	glBindVertexArray(cubeVAO);
 
-	// Generate three VBOs for vertices, indices, colors
+	//Generate three VBOs for vertices, indices, colors
 	glGenBuffers(VBOCOUNT, cubeVBO);
 
 	//Setup the vertex buffer
@@ -332,9 +398,8 @@ bool juzz_proto::Init()
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeVBO[3]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * numOfIndices, inds, GL_STATIC_DRAW);
 
-	//Set the terrains world matrix
-	cubeWorld = translate_tr(0.0f, 0.0f, -2.0f);
-
+	cubeWorld = translate_tr(0.0f, 0.0f, 0.0f);
+	
 	//Return true that everything succeeded
 	return true;
 }
@@ -375,26 +440,41 @@ void juzz_proto::ProcessInput(float dt)
 		}
 	}
 
+	if (m_input.IsKeyPressed(SDLK_r))
+	{
+		runn = !runn;
+	}
+
 	float speed = 10.0f;
 	if (m_input.IsKeyPressed(SDLK_w))
 	{
 		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
-		cameraTranslation += rot * vector3(0.0f, 0.0f, -speed) * dt;
+		cameraTranslation += rot * vector3(0.0f, 0.0f, speed) * dt;
 	}
 	if (m_input.IsKeyPressed(SDLK_s))
 	{
 		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
-		cameraTranslation += rot * vector3(0.0f, 0.0f, speed) * dt;
+		cameraTranslation += rot * vector3(0.0f, 0.0f, -speed) * dt;
 	}
 	if (m_input.IsKeyPressed(SDLK_a))
 	{
 		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
-		cameraTranslation += rot * vector3(-speed, 0.0f, 0.0f) * dt;
+		cameraTranslation += rot * vector3(speed, 0.0f, 0.0f) * dt;
 	}
 	if (m_input.IsKeyPressed(SDLK_d))
 	{
 		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
-		cameraTranslation += rot * vector3(speed, 0.0f, 0.0f) * dt;
+		cameraTranslation += rot * vector3(-speed, 0.0f, 0.0f) * dt;
+	}
+	if (m_input.IsKeyPressed(SDLK_u))
+	{
+		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
+		cameraTranslation += rot * vector3(0.0f, -speed, 0.0f) * dt;
+	}
+	if (m_input.IsKeyPressed(SDLK_j))
+	{
+		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
+		cameraTranslation += rot * vector3(0.0f, speed, 0.0f) * dt;
 	}
 
 	reGL3App::ProcessInput(dt);
@@ -412,7 +492,18 @@ void juzz_proto::Logic(float dt)
 	vector3 pos = cameraTranslation;
 	glUseProgram(m_shMain->m_programID);
 	glUniform3f(glGetUniformLocation(m_shMain->m_programID, "camera_pos"), pos.x, pos.y, pos.z);
+	printf("Camera Pos: (%.2f, %.2f, %.2f)\n", pos.x, pos.y, pos.z);
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "view"), 1, GL_FALSE, cameraView.m);
+
+	if (!runn)
+	{
+		angle += (PI / 8.0f) * dt;
+		if (angle > 2.0f * PI)
+			angle -= 2.0f * PI;
+	}
+
+	vector3 lightPos(cos(angle) * 10.0f, 10.0f, sin(angle) * 10.0f);
+	glUniform3f(glGetUniformLocation(m_shMain->m_programID, "light_Pos"), lightPos.x, lightPos.y, lightPos.z);
 }
 
 //Rendering method
@@ -428,12 +519,23 @@ void juzz_proto::Render(float dt)
 	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "world"), 1, GL_FALSE, cubeWorld.m);
 	glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_BYTE, 0);
 
+	vector3 lightPos(cos(angle) * 10.0f, 10.0f, sin(angle) * 10.0f);
+	matrix4 lworld = translate_tr(lightPos.x, lightPos.y, lightPos.z);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "world"), 1, GL_FALSE, lworld.m);
+	glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_BYTE, 0);
+	
 	//Check for any errors while drawing
 	CheckError("Error drawing");
 
 	SDL_GL_SwapWindow(m_pWindow);
 }
 
+
+//Function to calculate the normals for each vertex based on the triangles that it is part of
+void juzz_proto::CalculateNormals(vector3 *verticies, int size, vector3 *normals)
+{
+
+}
 
 //--------------------------------------------------------
 //LOADTEXTURE loads a heightmap from a pgm file into the given texture name.  It assumes there are

@@ -31,14 +31,15 @@ public:
 	~juzz_proto();
 
 	//Overridden methods
-	void ProcessInput (float dt);
-	void Logic (float dt);
-	void Render (float dt);
+	void ProcessInput(float dt);
+	void Logic(float dt);
+	void Render(float dt);
 
 private:
-	bool Init (void);
-	bool InitGL (void);
+	bool Init(void);
+	bool InitGL(void);
 
+	void CalculateNormals(vector3 *verticies, int size, vector3 *normals);
 	bool CheckError(string);
 	bool LoadHeightmap(GLuint *tex, GLuint *normal_tex, string filename, string normalmap_Filename); 
 
@@ -48,7 +49,10 @@ public:
 
 	GLuint cubeVAO;
 	GLuint cubeVBO[VBOCOUNT]; //VBOs for vertices, normals, colors, tex coords, indices
+	//vector3 *verticies;
+	//vector3 *normals;
 	int numOfIndices;
+	int terrainNumOfIndices;
 
 	GLuint m_heightmap_tex;
 	GLuint m_normalmap_tex;
@@ -59,6 +63,9 @@ public:
 	matrix4 cameraView;
 	vector3 cameraRotation;
 	vector3 cameraTranslation;
+
+	bool runn;
+	float angle;
 };
 
 #endif

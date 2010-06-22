@@ -1,12 +1,38 @@
 #version 150 core
 
+uniform vec3 camera_pos;
+uniform vec3 light_Pos;
+
+in vec4 vert_Pos;
 in vec4 vert_Color;
+in vec3 vert_Normal;
 
 out vec4 frag_Color;
 
-void main(){
+void main()
+{
+	vec3 lightDir = normalize(-light_Pos);
 
-	frag_Color = vert_Color;
+	vec3 normal = normalize(vert_Normal);
+
+	vec3 view = normalize(camera_pos - vert_Pos.xyz);
+	vec3 reflec = normalize(reflect(-lightDir, normal));
+
+	float diffuseIntensity = max(dot(normal, lightDir), 0.0f);
+
+	//Calculate the specular part
+	float specularPower = 96.0;
+	float specularIntensity = pow(max(dot(reflec, view), 0.0f), specularPower);
+
+	vec4 materialDiffuseColor = vec4(0.4, 0.4, 0.4, 1.0);
+	vec4 materialSpecularColor = vec4(1.0, 1.0, 1.0, 1.0);
+
+	vec4 lightAmbient = vec4(0.2, 0.2, 0.2, 1.0) * vert_Color;
+
+	materialDiffuseColor *= diffuseIntensity * vert_Color;
+	materialSpecularColor *= specularIntensity;
+
+	frag_Color = saturate(lightAmbient + materialDiffuseColor + materialSpecularColor);
 }
 
 /*
