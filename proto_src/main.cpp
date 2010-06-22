@@ -40,10 +40,10 @@ int main(int argc, char* argv[])
 	juzz_proto juzz(conf);
 	
 	if (!juzz.Start())
+	{
 		printf("Application failed to start\n");
-
-	//Sleep for 10 seconds to allow user to read messages
-	Sleep(10000);
+		Sleep(10000);
+	}
 
 	return 0;
 }

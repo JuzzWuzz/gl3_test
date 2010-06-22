@@ -21,6 +21,7 @@ typedef struct{
 } float2;
 
 #define PI (3.14159265358f)
+#define VBOCOUNT 4
 
 class juzz_proto : public reGL3App
 {
@@ -45,17 +46,19 @@ private:
 public:
 	ShaderProg* m_shMain; //Use the provided shader program class
 
-	GLuint m_vao;
-	GLuint m_vbo[4]; //VBOs for vertices, normals, colors, tex coords, indices
+	GLuint cubeVAO;
+	GLuint cubeVBO[VBOCOUNT]; //VBOs for vertices, normals, colors, tex coords, indices
+	int numOfIndices;
+
 	GLuint m_heightmap_tex;
 	GLuint m_normalmap_tex;
-	int m_nIndices;
-	float m_scale_metreToTex;
 
-	matrix4 m_proj_mat;
-	matrix4 m_camera_mat;
-	vector3 m_cam_rotate;
-	vector3 m_cam_translate;
+	matrix4 cubeWorld;
+
+	matrix4 cameraProjection;
+	matrix4 cameraView;
+	vector3 cameraRotation;
+	vector3 cameraTranslation;
 };
 
 #endif

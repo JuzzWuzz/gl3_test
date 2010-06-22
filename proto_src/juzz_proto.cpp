@@ -22,8 +22,8 @@ juzz_proto::~juzz_proto()
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
-	glDeleteBuffers(4, m_vbo);
-	glDeleteVertexArrays(1, &m_vao);
+	glDeleteBuffers(VBOCOUNT, cubeVBO);
+	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteTextures(1, &m_heightmap_tex);
 	glDeleteTextures(1, &m_normalmap_tex);
 }
@@ -77,10 +77,12 @@ bool juzz_proto::InitGL()
 
 	//Setup camera projection matrix and aspect ratio
 	aspect = float(m_config.winWidth) / (float)m_config.winHeight;
-	m_proj_mat = perspective_proj(PI * 0.5f, aspect, 0.5f, 50.0f);
+	cameraProjection = perspective_proj(PI * 0.5f, aspect, 0.1f, 50.0f);
 
 	//Init Camera
-	m_cam_rotate.x = PI*.1f;
+	cameraRotation.x = 0;
+	cameraRotation.y = 0;
+	cameraRotation.z = 0;
 
 	//Init Shaders
 	//Get the Shaders to Compile
@@ -90,7 +92,7 @@ bool juzz_proto::InitGL()
 	//allows the attributes to be declared in any order in the shader.
 	glBindAttribLocation(m_shMain->m_programID, 0, "in_Position");
 	glBindAttribLocation(m_shMain->m_programID, 1, "in_Color");
-	glBindAttribLocation(m_shMain->m_programID, 2, "in_TexCoord");
+	glBindAttribLocation(m_shMain->m_programID, 2, "in_Normal");
 
 	//NB. must be done after binding attributes
 	//Compiles the shaders and makes sure they are valid
@@ -107,8 +109,9 @@ bool juzz_proto::InitGL()
 	//Assign samplers to texture units
 	printf("Setting initial uniform variables\n");
 	glUseProgram(m_shMain->m_programID);
-	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "heightmap"),0);
-	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "normalmap"),1);
+	//glUniform1i(glGetUniformLocation(m_shMain->m_programID, "heightmap"), 0);
+	//glUniform1i(glGetUniformLocation(m_shMain->m_programID, "normalmap"), 1);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "projection"), 1, GL_FALSE, cameraProjection.m);
 	if (!CheckError("Creating shaders and setting initial uniforms"))
 		return false;
 	printf("Done setting initial uniforms\n");
@@ -126,101 +129,211 @@ bool juzz_proto::InitGL()
 //Initialisation method to setup the program
 bool juzz_proto::Init()
 {
-	vector3* vertices;
-	vector3* colors;
-	float2* texcoords;
-	GLushort* indices;
-	int i, j, x, z;
+	//The eight verticies for a cube
+	vector3 verts[8];
+	//Front
+	//Top Left
+	verts[0][0] = -1.0f;
+	verts[0][1] = 1.0f;
+	verts[0][2] = 1.0f;
+	//Top Right
+	verts[1][0] = 1.0f;
+	verts[1][1] = 1.0f;
+	verts[1][2] = 1.0f;
+	//Bottom Right
+	verts[2][0] = 1.0f;
+	verts[2][1] = -1.0f;
+	verts[2][2] = 1.0f;
+	//Bottom Left
+	verts[3][0] = -1.0f;
+	verts[3][1] = -1.0f;
+	verts[3][2] = 1.0f;
+	//Back
+	//Top Left
+	verts[4][0] = -1.0f;
+	verts[4][1] = 1.0f;
+	verts[4][2] = -1.0f;
+	//Top Right
+	verts[5][0] = 1.0f;
+	verts[5][1] = 1.0f;
+	verts[5][2] = -1.0f;
+	//Bottom Right
+	verts[6][0] = 1.0f;
+	verts[6][1] = -1.0f;
+	verts[6][2] = -1.0f;
+	//Bottom Left
+	verts[7][0] = -1.0f;
+	verts[7][1] = -1.0f;
+	verts[7][2] = -1.0f;
 
-	//Just some scaling settings
-	//1 unit = 1 metre
-	const float HMAP_SIZE = 100.0f; //heightmap is 100m x 100m
-	const float GRID_SIZE = 50.0f; //visible grid is 50m x 50m
-	const int GRID_DIM = 100; //100x100 quads in 50m x 50m grid area => quad = .5m x .5m
+	vector3 cols[6];
+	//Red
+	cols[0][0] = 1.0f;
+	cols[0][1] = 0.0f;
+	cols[0][2] = 0.0f;
+	//Green
+	cols[1][0] = 0.0f;
+	cols[1][1] = 1.0f;
+	cols[1][2] = 0.0f;
+	//Blue
+	cols[2][0] = 0.0f;
+	cols[2][1] = 0.0f;
+	cols[2][2] = 1.0f;
+	//Yellow
+	cols[3][0] = 1.0f;
+	cols[3][1] = 1.0f;
+	cols[3][2] = 0.0f;
+	//Turquoise
+	cols[4][0] = 0.0f;
+	cols[4][1] = 1.0f;
+	cols[4][2] = 1.0f;
+	//Pink
+	cols[5][0] = 1.0f;
+	cols[5][1] = 0.0f;
+	cols[5][2] = 1.0f;
 
-	float quadSize = GRID_SIZE / GRID_DIM;
-	float gridCoverage = GRID_SIZE / HMAP_SIZE; //Percentage of full map => texture coord range
-	float quadCoverage = gridCoverage / GRID_DIM;
-	int nVerts = GRID_DIM + 1;
-	m_nIndices = GRID_DIM * GRID_DIM * 2 * 3; //Quads * 2 tris * 3 verts
-
-	//Initialize camera start position and scale
-	m_scale_metreToTex = 1.0f / HMAP_SIZE;
-	m_cam_translate.x = HMAP_SIZE * 0.5f;
-	m_cam_translate.z = HMAP_SIZE * 0.5f;
-
-	//Tell shader of the tex coord increments
-	glUseProgram(m_shMain->m_programID);
-	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "texIncr"), quadCoverage);
-	glUniform1f(glGetUniformLocation(m_shMain->m_programID, "quadSize"), quadSize);
-
-	//Create the Grid
-	vertices = new vector3 [nVerts * nVerts];
-	colors   = new vector3 [nVerts * nVerts];
-	texcoords= new float2  [nVerts * nVerts];
-	indices  = new GLushort[m_nIndices]; 
-	i = 0;
-	j = 0;
-	for (z = 0; z < nVerts; z++)
+	//Constructs the cube based on the 8 verticies, 6 quads with 2 tris / quad
+	vector3 verticies[36] =
 	{
-		for (x = 0; x < nVerts; x++)
-		{
-			vertices[j].x 	= - GRID_SIZE*.5f + x * quadSize;
-			vertices[j].z 	= - GRID_SIZE*.5f + z * quadSize;
-			colors[j] 		= vector3(.0f, .5f, .7f);
-			texcoords[j].u	= quadCoverage * x;
-			texcoords[j].v	= quadCoverage * z;
-			if (x > 0 && z > 0)
-			{
-				indices[i++] = j-1;
-				indices[i++] = j-nVerts;
-				indices[i++] = j-nVerts-1;
+		//Front face
+		verts[2],
+		verts[1],
+		verts[0],
+		verts[0],
+		verts[3],
+		verts[2],
 
-				indices[i++] = j-nVerts;
-				indices[i++] = j-1;
-				indices[i++] = j;
-			}
-			j++;
-		}
+		//Right face
+		verts[6],
+		verts[5],
+		verts[1],
+		verts[1],
+		verts[2],
+		verts[6],
+
+		//Back face
+		verts[7],
+		verts[4],
+		verts[5],
+		verts[5],
+		verts[6],
+		verts[7],
+
+		//Left face
+		verts[3],
+		verts[0],
+		verts[4],
+		verts[4],
+		verts[7],
+		verts[3],
+
+		//Top face
+		verts[1],
+		verts[5],
+		verts[4],
+		verts[4],
+		verts[0],
+		verts[1],
+
+		//Bottom face
+		verts[6],
+		verts[2],
+		verts[3],
+		verts[3],
+		verts[7],
+		verts[6],
+	};
+
+	//The colours
+	vector3 colors[36] =
+	{
+		//Red
+		cols[0],
+		cols[0],
+		cols[0],
+		cols[0],
+		cols[0],
+		cols[0],
+
+		//Green
+		cols[1],
+		cols[1],
+		cols[1],
+		cols[1],
+		cols[1],
+		cols[1],
+
+		//Blue
+		cols[2],
+		cols[2],
+		cols[2],
+		cols[2],
+		cols[2],
+		cols[2],
+
+		//Yellow
+		cols[3],
+		cols[3],
+		cols[3],
+		cols[3],
+		cols[3],
+		cols[3],
+
+		//Turquoise
+		cols[4],
+		cols[4],
+		cols[4],
+		cols[4],
+		cols[4],
+		cols[4],
+
+		//Pink
+		cols[5],
+		cols[5],
+		cols[5],
+		cols[5],
+		cols[5],
+		cols[5],
+	};
+
+	vector3 normals[36];
+
+	//Indicies
+	numOfIndices = 36;
+	GLubyte *inds = new GLubyte[numOfIndices];
+	for (int i = 0; i < numOfIndices; i++)
+	{
+		inds[i] = i;
 	}
 
-	//Load heightmap
-	printf("\tLoading heightmap...\n");
-	if (!LoadHeightmap(&m_heightmap_tex, &m_normalmap_tex, "images/heightmaps/hmap01.pgm", "images/heightmaps/hmap01_normal.ppm"))
-		return false;
-	printf("\tHeightmap loaded\n");
+	// Create the vertex array
+	glGenVertexArrays(1, &cubeVAO);
+	glBindVertexArray(cubeVAO);
 
-	//Create the vertex array
-	glGenVertexArrays(1, &m_vao);
-	glBindVertexArray(m_vao);
-
-	//Generate four VBOs for vertices, colors, normals, texture coordinates and indices
-	glGenBuffers(4, m_vbo);
+	// Generate three VBOs for vertices, indices, colors
+	glGenBuffers(VBOCOUNT, cubeVBO);
 
 	//Setup the vertex buffer
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * nVerts * nVerts, vertices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, verticies, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
 	//Setup the color buffer
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * nVerts * nVerts, colors, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, colors, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(1);
-	//Setup the texcoord buffer
-	glBindBuffer(GL_ARRAY_BUFFER, m_vbo[2]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float2) * nVerts * nVerts, texcoords, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)2, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	//Setup the normal buffer
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[2]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, normals, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(2);
 	//Setup the index buffer
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[3]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * m_nIndices, indices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeVBO[3]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * numOfIndices, inds, GL_STATIC_DRAW);
 
-	//Free up the memory
-	delete[] vertices;
-	delete[] colors;
-	delete[] texcoords;
-	delete[] indices;
+	//Set the terrains world matrix
+	cubeWorld = translate_tr(0.0f, 0.0f, -2.0f);
 
 	//Return true that everything succeeded
 	return true;
@@ -234,9 +347,9 @@ void juzz_proto::ProcessInput(float dt)
 	if (m_input.IsButtonPressed(1))
 	{
 		//Pitch
-		m_cam_rotate.x += dt * move.y * PI * 0.1f;
+		cameraRotation.x += dt * move.y * PI * 0.1f;
 		//Yaw
-		m_cam_rotate.y += dt * move.x * PI * 0.1f;
+		cameraRotation.y += dt * move.x * PI * 0.1f;
 	}
 	
 	//Toggle mouse grabbing
@@ -265,23 +378,23 @@ void juzz_proto::ProcessInput(float dt)
 	float speed = 10.0f;
 	if (m_input.IsKeyPressed(SDLK_w))
 	{
-		matrix4 rot = rotate_tr(-m_cam_rotate.y, 0.0f, 1.0f, 0.0f);
-		m_cam_translate += rot * vector3(0.0f, 0.0f, -speed) * dt;
+		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
+		cameraTranslation += rot * vector3(0.0f, 0.0f, -speed) * dt;
 	}
 	if (m_input.IsKeyPressed(SDLK_s))
 	{
-		matrix4 rot = rotate_tr(-m_cam_rotate.y, 0.0f, 1.0f, 0.0f);
-		m_cam_translate += rot * vector3(0.0f, 0.0f, speed) * dt;
+		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
+		cameraTranslation += rot * vector3(0.0f, 0.0f, speed) * dt;
 	}
 	if (m_input.IsKeyPressed(SDLK_a))
 	{
-		matrix4 rot = rotate_tr(-m_cam_rotate.y, 0.0f, 1.0f, 0.0f);
-		m_cam_translate += rot * vector3(-speed, 0.0f, 0.0f) * dt;
+		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
+		cameraTranslation += rot * vector3(-speed, 0.0f, 0.0f) * dt;
 	}
 	if (m_input.IsKeyPressed(SDLK_d))
 	{
-		matrix4 rot = rotate_tr(-m_cam_rotate.y, 0.0f, 1.0f, 0.0f);
-		m_cam_translate += rot * vector3(speed, 0.0f, 0.0f) * dt;
+		matrix4 rot = rotate_tr(-cameraRotation.y, 0.0f, 1.0f, 0.0f);
+		cameraTranslation += rot * vector3(speed, 0.0f, 0.0f) * dt;
 	}
 
 	reGL3App::ProcessInput(dt);
@@ -290,31 +403,33 @@ void juzz_proto::ProcessInput(float dt)
 //Logic method
 void juzz_proto::Logic(float dt)
 {
-	// Update position
-	vector3 pos = m_cam_translate * m_scale_metreToTex;
+	//Update the cameras view matrix
+	matrix4 camRot = rotate_tr(cameraRotation.x, 1.0f, 0.0f, 0.0f) * rotate_tr(cameraRotation.y, 0.0f, 1.0f, 0.0f);
+	matrix4 camTrans = translate_tr(cameraTranslation.x, cameraTranslation.y, cameraTranslation.z);
+	cameraView = camRot * camTrans;
+
+	//Update camera position in shaders
+	vector3 pos = cameraTranslation;
 	glUseProgram(m_shMain->m_programID);
 	glUniform3f(glGetUniformLocation(m_shMain->m_programID, "camera_pos"), pos.x, pos.y, pos.z);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "view"), 1, GL_FALSE, cameraView.m);
 }
 
 //Rendering method
 void juzz_proto::Render(float dt)
 {
+	//Clear the screen
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-
-	matrix4 modelview(m_camera_mat);
-	matrix4 rotate;
-
-
-	rotate = rotate_tr(m_cam_rotate.x, 1.0f, 0.0f, 0.0f) * rotate_tr(m_cam_rotate.y, 0.0f, 1.0f, 0.0f);
-
-	glBindVertexArray(m_vao);
-	glBindTexture(GL_TEXTURE_2D, m_heightmap_tex);
-	// Use the shader program and setup uniform variables.
+	//Draw the cube
+	glBindVertexArray(cubeVAO);
 	glUseProgram(m_shMain->m_programID);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "rotprojMatrix"), 1, GL_FALSE, (m_proj_mat*rotate).m);
-	// Depending on state, draw triangle or quad patch
-	glDrawElements(GL_TRIANGLES, m_nIndices, GL_UNSIGNED_SHORT, 0);
+	//glBindTexture(GL_TEXTURE_2D, m_heightmap_tex);
+	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "world"), 1, GL_FALSE, cubeWorld.m);
+	glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_BYTE, 0);
+
+	//Check for any errors while drawing
+	CheckError("Error drawing");
 
 	SDL_GL_SwapWindow(m_pWindow);
 }
