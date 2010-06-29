@@ -9,6 +9,7 @@
 #include "regl3.h"
 #include "re_math.h"
 #include "re_shader.h"
+#include <SDL/SDL_image.h>
 
 using namespace reMath;
 
@@ -20,8 +21,10 @@ typedef struct{
 	float u, v;
 } float2;
 
-#define PI (3.14159265358f)
-#define VBOCOUNT 4
+#define HPI (1.56905099753f)
+#define  PI (3.14159265358f)
+#define TPI (6.28318530716f)
+#define VBOCOUNT 6
 
 class juzz_proto : public reGL3App
 {
@@ -39,33 +42,35 @@ private:
 	bool Init(void);
 	bool InitGL(void);
 
+	void UpdateViewMatrix();
 	void CalculateNormals(vector3 *verticies, int size, vector3 *normals);
+	void CalculateTexcoords(vector2 *texcoords, int size);
+	void CalculateTangents(vector3 *verticies, vector2 *texcoords, int size, vector3 *tangents);
 	bool CheckError(string);
-	bool LoadHeightmap(GLuint *tex, GLuint *normal_tex, string filename, string normalmap_Filename); 
+	bool LoadTexturePNG(GLuint* tex, int* width, int* height, string filename);
+	bool LoadTextureJPG(GLuint* tex, int* width, int* height, string filename);
 
 //Variables
 public:
 	ShaderProg* m_shMain; //Use the provided shader program class
 
 	GLuint cubeVAO;
-	GLuint cubeVBO[VBOCOUNT]; //VBOs for vertices, normals, colors, tex coords, indices
-	//vector3 *verticies;
-	//vector3 *normals;
+	GLuint cubeVBO[VBOCOUNT]; //VBOs for vertices, colors, tex coords, normals, tangents, indices
 	int numOfIndices;
-	int terrainNumOfIndices;
 
-	GLuint m_heightmap_tex;
-	GLuint m_normalmap_tex;
+	GLuint colorMap;
+	GLuint normalMap;
 
 	matrix4 cubeWorld;
 
 	matrix4 cameraProjection;
 	matrix4 cameraView;
 	vector3 cameraRotation;
-	vector3 cameraTranslation;
+	vector3 cameraTarget;
 
-	bool runn;
 	float angle;
+	int frames;
+	float timerCount;
 };
 
 #endif

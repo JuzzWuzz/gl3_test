@@ -22,6 +22,7 @@
 #pragma comment(lib, "opengl32.lib")
 #pragma comment(lib, "sdl.lib")
 #pragma comment(lib, "sdlmain.lib")
+#pragma comment(lib, "sdl_image.lib")
 #endif
 
 #include "juzz_proto.h"
@@ -35,7 +36,7 @@ int main(int argc, char* argv[])
 	conf.VSync = true;
 	conf.gl_major = 3;
 	conf.gl_minor = 2;
-	conf.fsaa=4;
+	conf.fsaa=0;
 	conf.sleepTime = .01f;
 	juzz_proto juzz(conf);
 	
@@ -44,6 +45,7 @@ int main(int argc, char* argv[])
 		printf("Application failed to start\n");
 		Sleep(10000);
 	}
+	//Sleep(2000);
 
 	return 0;
 }

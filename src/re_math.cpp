@@ -239,6 +239,265 @@ namespace reMath{
 				- m[12]* (m[1]*m_6_10	- m[5]*m_2_10	+ m[9] *m_2_6);
 	}
 
+	//-------------------------------------------------------------------------
+	// GETMATRIX3 Returns the matrix3 stored from the top left of the matrix.
+	matrix3
+	matrix4::GetMatrix3(){
+		matrix3 out;
+
+		out[0] = m[0];
+		out[1] = m[1];
+		out[2] = m[2];
+
+		out[3] = m[4];
+		out[4] = m[5];
+		out[5] = m[6];
+
+		out[6] = m[8];
+		out[7] = m[9];
+		out[8] = m[10];
+
+		return out;
+	}
+
+
+	/**************************************************************************
+	 * matrix3 
+	 **************************************************************************/
+
+	//-------------------------------------------------------------------------
+	// Constructs an identity matrix
+	matrix3::matrix3(){
+		SetIdentity();
+	}
+
+	//-------------------------------------------------------------------------
+	// Constructs a copy of the given matrix
+	matrix3::matrix3(const matrix3& copy){
+		memcpy((void*)m, (void*)copy.m, sizeof(m));
+	}
+
+	//-------------------------------------------------------------------------
+	// Constructs a matrix with the given elements
+	matrix3::matrix3(const float elems[9]){
+		memcpy((void*)m, (void*)elems, sizeof(m));
+	}
+
+	//-------------------------------------------------------------------------
+	// STR returns a formatted string representation of the matrix
+	string 
+	matrix3::str( void ){
+		char out[256];
+		// column-major
+		sprintf(out,"\n|%.2f\t%.2f\t%.2f|\n|%.2f\t%.2f\t%.2f|\n|%.2f\t%.2f\t%.2f|\n",
+			m[0],m[3],m[6],m[1],m[4],m[7],m[2],m[5],m[8]);
+		return string(out);
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR+ performs matrix addition
+	matrix3 
+	matrix3::operator +(const matrix3 &mat)const{
+		matrix3 out;
+		for (int i = 0; i < 9; i++)
+			out[i] = m[i]+mat.m[i];
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR- performs matrix subtraction
+	matrix3 
+	matrix3::operator -(const matrix3 &mat)const{
+		matrix3 out;
+		for (int i = 0; i < 9; i++)
+			out[i] = m[i]-mat.m[i];
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR* performs matrix-scalar multiplication
+	matrix3 
+	matrix3::operator *(float scalar)const{
+		matrix3 out;
+		for (int i = 0; i < 9; i++)
+			out[i] = m[i] * scalar;
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR* performs matrix multiplication
+	matrix3 
+	matrix3::operator *(const matrix3 &mat)const{
+		matrix3 out;
+
+		int col;
+		for (int i = 0; i < 3; i++){
+			col=0;
+			for (int j = 0; j < 3; j++){
+				out.m[i+col] = 	m[i] 		* 	mat.m[col] 		+
+								m[i+3]		*	mat.m[col+1] 	+
+								m[i+6]		*	mat.m[col+2];
+
+				col+=3;
+			}
+		}
+		return out;
+	}
+	
+	//-------------------------------------------------------------------------
+	// OPERATOR*= performs (inplace) matrix multiplications
+	void 
+	matrix3::operator *=(const matrix3 &mat){
+		float temp[9];
+
+		int col;
+		for (int i = 0; i < 3; i++){
+			col=0;
+			for (int j = 0; j < 3; j++){
+				temp[i+col] = 	m[i] 		* 	mat.m[col]	 	+
+								m[i+3]		*	mat.m[col+1] 	+
+								m[i+6]		*	mat.m[col+2];
+				col+=3;
+			}
+		}
+		memcpy(this->m, temp, sizeof(float)*9);
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR* performs matrix-vector3 multiplication
+	vector3
+	matrix3::operator *(const vector3& vec)const{
+		vector3 product;
+		product.x = m[0]*vec.x+m[3]*vec.y+m[6]*vec.z;
+		product.y = m[1]*vec.x+m[4]*vec.y+m[7]*vec.z;
+		product.z = m[2]*vec.x+m[5]*vec.y+m[8]*vec.z;
+		return product;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR* performs matrix-vector2 multiplication
+	vector2
+	matrix3::operator *(const vector2& vec)const {
+		vector2 product;
+		product.x = m[0]*vec.x+m[3]*vec.y;
+		product.y = m[1]*vec.x+m[4]*vec.y;
+		return product;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR* performs scalar-matrix multiplication
+	matrix3 
+	operator*(float scalar, const matrix3& mat){
+		matrix3 out;
+		for (int i = 0; i < 9; i++)
+			out[i] = mat.m[i] * scalar;
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR+= performs (in-place) matrix addition
+	matrix3& 
+	matrix3::operator +=(const matrix3 &mat){
+		for (int i = 0; i < 9; i++)
+			m[i]+=mat.m[i];
+		return *this;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR-= performs (in-place) matrix subtraction
+	matrix3& 
+	matrix3::operator -=(const matrix3 &mat){
+		for (int i = 0; i < 9; i++)
+			m[i]-=mat.m[i];
+		return *this;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR== performs a per-element equality test
+	bool 
+	matrix3::operator ==(const matrix3 &mat)const{
+		for (int i = 0; i < 9; i++)
+			if (m[i]!=mat.m[i])
+				return false;
+		return true;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR!= performs a per-element equality test, return true if any fail
+	bool 
+	matrix3::operator !=(const matrix3 &mat)const{
+		for (int i = 0; i < 9; i++)
+			if (m[i]!=mat.m[i])
+				return true;
+		return false;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR[] returns a reference to the element at the given index.
+	float& 
+	matrix3::operator[](int idx){
+		return m[idx];
+	}
+
+	//-------------------------------------------------------------------------
+	// SETIDENTITY Resets the matrix to an identity matrix
+	void 
+	matrix3::SetIdentity(){
+		memset((void*)m, 0, sizeof(m));
+		m[0] = m[4]= m[8] = 1.0f;
+	}
+
+	//-------------------------------------------------------------------------
+	// INVERSE Returns the inverse of the matrix.
+	matrix3
+	matrix3::Inverse(){
+		matrix3 out;
+		float det = Determinant();
+
+		if (det == 0.0f){
+			out.SetIdentity();
+		} else{
+			det = 1.0f / det;
+
+			out.m[0] = det * (m[4] * m[8] - m[7] * m[5]);
+			out.m[3] = det * (m[6] * m[5] - m[3] * m[8]);
+			out.m[6] = det * (m[3] * m[7] - m[6] * m[4]);
+
+			out.m[1] = det * (m[7] * m[2] - m[1] * m[8]);
+			out.m[4] = det * (m[0] * m[8] - m[6] * m[2]);
+			out.m[7] = det * (m[6] * m[1] - m[0] * m[7]);
+
+			out.m[3] = det * (m[1] * m[5] - m[4] * m[2]);
+			out.m[5] = det * (m[2] * m[2] - m[0] * m[5]);
+			out.m[8] = det * (m[0] * m[4] - m[2] * m[1]);
+		}
+
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// TRANSPOSE Returns the transpose of the matrix.
+	matrix3 
+	matrix3::Transpose(){
+		matrix3 out;
+		for (int i = 0; i < 3; i ++){
+			for (int j = 0; j < 3; j++){
+				out.m[j*3+i] = m[i*3+j];
+			}
+		}
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// DETERMINANT Returns the determinant of the matrix.
+	float 
+	matrix3::Determinant(){
+		return (m[0] * (m[4] * m[8] - m[7] * m[5]))
+			 - (m[3] * (m[1] * m[8] - m[7] * m[2]))
+			 + (m[6] * (m[1] * m[5] - m[4] * m[2]));
+	}
+
+
 	/**************************************************************************
 	 * vector4 - not fully functional
 	 **************************************************************************/
@@ -529,6 +788,13 @@ namespace reMath{
 	}
 
 	//-------------------------------------------------------------------------
+	// SET sets the components of the vector to those given
+	void
+	vector3::set(float _x, float _y, float _z){
+		x=_x; y=_y; z=_z;
+	}
+
+	//-------------------------------------------------------------------------
 	// MAG returns the length/magnitude of the vector
 	float 
 	vector3::Mag()const{
@@ -572,6 +838,190 @@ namespace reMath{
 	vector3::GetUnit()const{
 		float magInv = 1.0f/Mag();
 		return vector3(x*magInv, y*magInv, z*magInv);
+	}
+
+	/**************************************************************************
+	 * vector2 
+	 **************************************************************************/
+
+	//-------------------------------------------------------------------------
+	// Constructs a zero vector
+	vector2::vector2(){
+		memset((void*)v, 0, 2*sizeof(float));
+	}
+
+	//-------------------------------------------------------------------------
+	// Constructs a vector from the given components
+	vector2::vector2(float _x, float _y){
+		x=_x; y=_y;
+	}
+
+	//-------------------------------------------------------------------------
+	// Constructs a vector from the given components
+	vector2::vector2(const float elems[2]){
+		memcpy((void*)v, (void*)elems, sizeof(v));
+	}
+
+	//-------------------------------------------------------------------------
+	// Constructs a copy of the given vector
+	vector2::vector2(const vector2& copy){
+		memcpy((void*)v, (void*)copy.v, sizeof(v));
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR+ performs vector addition
+	vector2 
+	vector2::operator +(const vector2 &vec) const{
+		vector2 out;
+		out.x = x + vec.x;
+		out.y = y + vec.y;
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR- performs vector subtraction
+	vector2 
+	vector2::operator -(const vector2 &vec) const{
+		vector2 out;
+		out.x = x - vec.x;
+		out.y = y - vec.y;
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR- performs vector negation.
+	vector2 
+	vector2::operator -() const{
+		vector2 out;
+		out.x = - x;
+		out.y = - y;
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR* performs vector-scalar multiplication
+	vector2 
+	vector2::operator *(float scalar) const{
+		vector2 out;
+		out.x = x * scalar;
+		out.y = y * scalar;
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR* performs scalar-vector multiplication
+	vector2 
+	operator *(float scalar, vector2 &vec){
+		vector2 out;
+		out.x = vec.x * scalar;
+		out.y = vec.y * scalar;
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR+= performs (in-place) vector addition
+	vector2& 
+	vector2::operator +=(const vector2 &vec){
+		x += vec.x;
+		y += vec.y;
+		return *this;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR-= performs (in-place) vector subtraction
+	vector2& 
+	vector2::operator -=(const vector2 &vec){
+		x -= vec.x;
+		y -= vec.y;
+		return *this;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR*= performs (in-place) scalar multiplication
+	vector2& 
+	vector2::operator *=(float scalar){
+		x *= scalar;
+		y *= scalar;
+		return *this;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR== tests whether this vector is equal to another
+	bool 
+	vector2::operator ==(const vector2& vec) const{
+		if (x!=vec.x || y!=vec.y)
+			return false;
+		return true;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR!= tests whether this vector is not equal to another
+	bool
+	vector2::operator !=(const vector2& vec) const{
+		if (x!=vec.x || y!=vec.y)
+			return true;
+		return false;
+	}
+
+	//-------------------------------------------------------------------------
+	// OPERATOR[] returns a reference to the element at the given index
+	float& 
+	vector2::operator [](int idx){
+		return v[idx];
+	}
+
+	//-------------------------------------------------------------------------
+	// STR returns a formatted string representation of the vector
+	string 
+	vector2::str(){
+		char out[64];
+		sprintf(out,"<%.2f, %.2f>",x,y);
+		return string(out);
+	}
+
+	//-------------------------------------------------------------------------
+	// SET sets the components of the vector to those given
+	void
+	vector2::set(float _x, float _y){
+		x=_x; y=_y;
+	}
+
+	//-------------------------------------------------------------------------
+	// MAG returns the length/magnitude of the vector
+	float 
+	vector2::Mag()const{
+		return sqrt(x*x+y*y);
+	}
+
+	//-------------------------------------------------------------------------
+	// MAG2 returns the magnitude squared
+	float 
+	vector2::Mag2()const{
+		return x*x+y*y;
+	}
+
+	//-------------------------------------------------------------------------
+	// DOT returns the dot product with the given vector
+	float 
+	vector2::Dot(const vector2 & v) const{
+		return x*v.x + y*v.y;
+	}
+
+	//-------------------------------------------------------------------------
+	// NORMALIZE scales this vector to magnitude 1
+	void 
+	vector2::Normalize(){
+		float magInv = 1.0f/Mag();
+		x*=magInv;
+		y*=magInv;
+	}
+
+	//-------------------------------------------------------------------------
+	// Returns a normalized version of this vector
+	vector2 
+	vector2::GetUnit()const{
+		float magInv = 1.0f/Mag();
+		return vector2(x*magInv, y*magInv);
 	}
 
 	/******************************************************************************
@@ -619,6 +1069,7 @@ namespace reMath{
 		mat[11] = -1.0f;
 		// last column
 		mat[14] = 2*far*near/(near - far);
+		mat[15] = .0f;
 
 		return mat4;
 	}
@@ -666,6 +1117,107 @@ namespace reMath{
 		mat[15] = 1.0f;
 
 		return mat4;
+	}
+
+	//-------------------------------------------------------------------------
+	// CREATE LOOK AT creates a look-at matrix for use as a view matrix
+	matrix4
+	create_look_at(vector3 &camera, vector3 &target, vector3 &up){
+		// Builds a look-at style view matrix.
+		// This is essentially the same matrix used by gluLookAt().
+
+		matrix4 out;
+
+		vector3 zAxis = camera - target;
+		zAxis.Normalize();
+
+		vector3 xAxis = up.Cross(zAxis);
+		xAxis.Normalize();
+
+		vector3 yAxis = zAxis.Cross(xAxis);
+		yAxis.Normalize();
+
+		out[0] = xAxis.x;
+		out[4] = xAxis.y;
+		out[8] = xAxis.z;
+		out[12] = -xAxis.Dot(camera);
+
+		out[1] = yAxis.x;
+		out[5] = yAxis.y;
+		out[9] = yAxis.z;
+		out[13] = -yAxis.Dot(camera);
+
+		out[2] = zAxis.x;
+		out[6] = zAxis.y;
+		out[10] = zAxis.z;
+		out[14] = -zAxis.Dot(camera);
+
+		out[3] = 0.0f;
+		out[7] = 0.0f;
+		out[11] = 0.0f;
+		out[15] = 1.0f;
+
+		return out;
+	}
+
+	//-------------------------------------------------------------------------
+	// PERSPECTIVE_UNPROJ_WORLD, given a mouse x,y coordinate along with the z-buffer
+	// value, returns the world-space coordinate displayed at that location in the viewport.
+	// The fragment coordinate assumes positive y to be upwards. tan_fovy is the tangent
+	// of HALF the field-of-view => tan_fovy = tan(fov/2)
+	vector3
+	perspective_unproj_world (vector3 fragment, float w, float h, float near, float far,
+			float tan_fovy, matrix4& inverseView)
+	{
+		float x,y,z,aspect;
+
+		aspect = w/h;
+		x = fragment.x;
+		y = fragment.y;
+		z = fragment.z;
+
+		// Convert to Normalized Device Coordinates
+		x = (x*2.0f/w)-1.0f;
+		y = (y*2.0f/-h)+1.0f;
+		z = z*2 - 1.0f;
+		
+		// to eye space, first need to get z
+		z = (2 * far * near) / 
+			((z - (far + near) / (far - near)) * (far - near));
+
+		y = y * (-z) * tan_fovy;
+		x = x * (-z) * aspect * tan_fovy;
+
+		// reverse the view transformation to acquire world-space coordinates
+		return inverseView * vector3(x,y,z);
+	}
+
+	//-------------------------------------------------------------------------
+	// PERSPECTIVE_UNPROJ_VIEW, given a mouse x,y coordinate along with the z-buffer
+	// value, returns the eye-space coordinate displayed at that location in the viewport.
+	vector3
+	perspective_unproj_view (vector3 fragment, float w, float h, float near, float far,
+			float tan_fovy)
+	{
+		float x,y,z,aspect;
+
+		aspect = w/h;
+		x = fragment.x;
+		y = fragment.y;
+		z = fragment.z;
+
+		// Convert to Normalized Device Coordinates
+		x = (x*2.0f/w)-1.0f;
+		y = (y*2.0f/-h)+1.0f;
+		z = z*2 - 1.0f;
+		
+		// to eye space, first need to get z
+		z = (2 * far * near) / 
+			((z - (far + near) / (far - near)) * (far - near));
+
+		y = y * (-z) * tan_fovy;
+		x = x * (-z) * aspect * tan_fovy;
+		return vector3(x,y,z);
 	}
 
 	/******************************************************************************

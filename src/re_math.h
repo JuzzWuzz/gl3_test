@@ -14,8 +14,10 @@
 namespace reMath{
 	// Forward declarations
 	class matrix4;
+	class matrix3;
 	class vector4;
 	class vector3;
+	class vector2;
 
 	/******************************************************************************
 	 * TRANSFORMS AND MATH
@@ -85,6 +87,8 @@ namespace reMath{
 		float&		operator[]		(int idx) ;
 		string		str				(void);
 
+		void		set				(float x, float y, float z);
+
 		float		Mag				(void) const;
 		float		Mag2			(void) const;
 
@@ -102,6 +106,52 @@ namespace reMath{
 		};
 	};
 	vector3 operator*	(float scalar, const vector3& vec);
+
+		/******************************************************************************
+	 * vector2
+	 * A class to handle 2D vectors and their operations
+	 ******************************************************************************/
+	class vector2{
+	public:
+		vector2();
+		vector2(float x, float y);
+		vector2(const vector2& copy);
+		vector2(const float elems[2]);
+
+		vector2		operator+		(const vector2& vec) const;
+		vector2		operator-		(const vector2& vec) const;
+		vector2		operator-		() const;
+		vector2		operator*		(float scalar) const;
+		friend vector2 operator*	(float scalar, const vector2& vec);
+
+		vector2&	operator+=		(const vector2& vec);
+		vector2&	operator-=		(const vector2& vec);
+		vector2&	operator*=		(float scalar);
+
+		bool		operator==		(const vector2& vec) const;
+		bool		operator!=		(const vector2& vec) const;
+
+		float&		operator[]		(int idx) ;
+		string		str				(void);
+
+		void		set				(float x, float y);
+
+		float		Mag				(void) const;
+		float		Mag2			(void) const;
+
+		float		Dot				(const vector2&)const;
+
+		void		Normalize		(void);
+		vector2		GetUnit			(void) const;
+
+
+	public:
+		union{
+			struct {float x,y;};
+			float v[2];
+		};
+	};
+	vector2 operator*	(float scalar, const vector2& vec);
 
 	/******************************************************************************
 	 * matrix4
@@ -128,12 +178,54 @@ namespace reMath{
 		bool		operator==		(const matrix4& mat) const;
 		bool		operator!=		(const matrix4& mat) const;
 
-		float&		operator[]		(int idx) ;
+		float&		operator[]		(int idx);
 
 		string		str				(void);
 		
 		void		SetIdentity		(void);
 		matrix4		Transpose		(void);
+		float		Determinant		(void);
+		matrix3		GetMatrix3		(void);
+
+	public:
+		float	m[16];
+	};
+	matrix4 operator*	(float scalar, const matrix4&);
+
+
+
+	/******************************************************************************
+	 * matrix3
+	 * A class to represent 3x3 matrices that are often used in vector
+	 * transformations. Note column-major indices
+	 ******************************************************************************/
+	class matrix3{
+	public:
+		matrix3();
+		matrix3(const matrix3& copy);
+		matrix3(const float elems[9]);
+
+		matrix3		operator+		(const matrix3& mat) const;
+		matrix3		operator-		(const matrix3& mat) const;
+		matrix3		operator*		(float scalar) const;
+		friend matrix3 operator*	(float scalar, const matrix3& mat);
+		matrix3		operator*		(const matrix3& mat) const;
+		vector3		operator*		(const vector3& vec) const;
+		vector2		operator*		(const vector2& vec) const;
+		void		operator*=		(const matrix3& mat);
+		matrix3&	operator+=		(const matrix3& mat);
+		matrix3&	operator-=		(const matrix3& mat);
+
+		bool		operator==		(const matrix3& mat) const;
+		bool		operator!=		(const matrix3& mat) const;
+
+		float&		operator[]		(int idx);
+
+		string		str				(void);
+		
+		void		SetIdentity		(void);
+		matrix3		Inverse			(void);
+		matrix3		Transpose		(void);
 		float		Determinant		(void);
 
 	public:
@@ -151,6 +243,12 @@ namespace reMath{
 	matrix4 perspective_proj	(float fovy, float aspect, float near, float far);
 	matrix4 ortho_proj			(float left, float right, float bottom, float top, float near, float far);
 	matrix4 ortho2d_proj		(float left, float right, float bottom, float top);
+	matrix4 create_look_at		(vector3 &camera, vector3 &target, vector3 &up);
+	vector3 perspective_unproj_world	(vector3 fragment, float w, float h, float near, float far, 
+											float tan_fovy, matrix4& inverseView);
+	vector3 perspective_unproj_view		(vector3 fragment, float w, float h, float near, float far, 
+											float tan_fovy);
+
 
 	matrix4 translate_tr	(float x, float y, float z);
 	matrix4 rotate_tr		(float angle, float x, float y, float z);

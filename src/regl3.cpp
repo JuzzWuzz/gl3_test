@@ -268,13 +268,14 @@ reGL3App::WinProc(){
 			case SDL_MOUSEMOTION:
 				m_input.MoveMouse(evt.motion);
 				break;
-			case SDL_MOUSEBUTTONDOWN:
-				if (evt.button.button==SDL_BUTTON_WHEELUP)
+			case SDL_MOUSEWHEEL:
+				if (evt.wheel.y > 0)
 					m_input.WheelUp();
-				else if (evt.button.button==SDL_BUTTON_WHEELDOWN)
-					m_input.WheelDown();
 				else
-					m_input.PressButton(evt.button.button);
+					m_input.WheelDown();
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				m_input.PressButton(evt.button.button);
 				break;
 			case SDL_MOUSEBUTTONUP:
 				m_input.ReleaseButton(evt.button.button);

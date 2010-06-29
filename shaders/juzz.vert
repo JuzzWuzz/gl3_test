@@ -1,85 +1,62 @@
 #version 150 core
 
-#define HEIGHT 10.0
-
 uniform mat4 world;
 uniform mat4 view;
 uniform mat4 projection;
-
-uniform vec3 camera_pos;
+uniform mat3 normalMat;
+uniform vec3 light_Pos;
+uniform vec3 camera_Pos;
+uniform float useCameraLight;
 
 in vec3 in_Position;
 in vec3 in_Color;
+in vec2 in_Texcoords;
 in vec3 in_Normal;
+in vec3 in_Tangent;
 
-out vec4 vert_Pos;
+out vec3 vert_View;
+out vec3 vert_LightDir;
 out vec4 vert_Color;
-out vec3 vert_Normal;
-
+out vec2 vert_Texcoords;
 
 void main()
 {
 	//Perform world view projection matrix calculation
-	mat4 wvp = projection * view * world;
+	mat4 mv = view * world;
+	mat4 mvp = projection * mv;
 
+	//Read in the normal and tangent vectors then calculate the binormal
+	//The normal and tangent need to be multiplied with the normal matrix
+	vec3 normal = normalize(vec3(mv * vec4(in_Normal, 0.0f)));
+	vec3 tangent = normalize(vec3(mv * vec4(in_Tangent, 0.0f)));
+	vec3 binormal = normalize(cross(normal, tangent));
+
+	//Calculate the TBN matrix
+	mat3 tbn = mat3(tangent.x, binormal.x, normal.x,
+					tangent.y, binormal.y, normal.y,
+					tangent.z, binormal.z, normal.z);
+
+	//Output the final position of the vertex
 	gl_Position = vec4(in_Position, 1.0);
-	gl_Position = wvp * gl_Position;
+	gl_Position = mvp * gl_Position;
 
-	vert_Pos = world * vec4(in_Position, 1.0);
+	//Use the vertex's position to locate the position of the view vector
+	//in tangent space.This is the '-' of the vertex position since calculations 
+	//are done in eye space.
+	vec4 pos = mv * vec4(in_Position, 1.0);
+	vert_View = -(pos.xyz / pos.w);
+	vert_View = tbn * vert_View;
 
-	vert_Normal = in_Normal;
+	//Calculate the position of the light in tangent space.
+	vec3 lightDir = light_Pos;
+	if (useCameraLight == 1.0)
+		lightDir = camera_Pos;
+	vert_LightDir = vec3(view * vec4(lightDir, 0.0f));
+	vert_LightDir = tbn * vert_LightDir;
 
+	//Pass through the color of the vertex
 	vert_Color = vec4(in_Color, 1.0);
+
+	//Pass through the texture coordinates
+	vert_Texcoords = in_Texcoords;
 }
-
-/*
-
-uniform sampler2D heightmap;
-uniform sampler2D normalmap;
-uniform mat4 world;
-uniform mat4 view;
-uniform mat4 projection;
-
-uniform vec3 camera_pos;
-
-in vec2 in_TexCoord;
-
-out vec2 vert_TexCoord;
-out vec3 vert_Tangent;
-out vec3 vert_Binormal;
-out vec3 vert_Normal;
-out mat3 tbn;
-out vec4 vert_Pos;
-
-
-	float height, camera_height;
-	vec2 texCoord;
-
-	texCoord.s = in_TexCoord.s + camera_pos.x;
-	texCoord.t = in_TexCoord.t + camera_pos.z;
-
-	camera_height = 1.0;
-	height = texture2D(heightmap, texCoord).r - camera_height;
-
-	//Perform world view projection matrix calculation
-	mat4 wvp = projection * view * world;
-
-	gl_Position = vec4(in_Position, 1.0);
-	gl_Position.y += height * HEIGHT;
-	//vert_Pos = world * gl_Position;
-	//vert_Pos /= vert_Pos.w;
-	gl_Position = wvp * gl_Position;
-
-	vert_Color = vec4(in_Color, 1.0);
-	
-	//we swizzle the rgb to rbg so that blue represents vertical vector
-	vert_Normal = vec3(1.0, 0.0, 0.0);//normalize(texture2D(normalmap, texCoord).rbg*2.0 - 1.0);
-	vert_Tangent = cross(vert_Normal, vec3(0.0, 1.0, 0.0));
-	vert_Binormal = cross(vert_Normal, vert_Tangent);
-
-	tbn[0] = vert_Tangent;
-	tbn[1] = vert_Binormal;
-	tbn[2] = vert_Normal;
-
-	vert_TexCoord = texCoord;
-*/
