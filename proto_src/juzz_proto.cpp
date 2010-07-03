@@ -11,14 +11,14 @@
 //Constructor to create the new instance
 juzz_proto::juzz_proto(AppConfig& conf) : reGL3App(conf)
 {
-	m_shMain = NULL;
+	shader = NULL;
 }
 
 //Destructor
 juzz_proto::~juzz_proto()
 {
 	glUseProgram(0);
-	RE_DELETE(m_shMain);
+	RE_DELETE(shader);
 	glDisableVertexAttribArray(0);
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
@@ -77,24 +77,25 @@ bool juzz_proto::InitGL()
 
 	//Setup camera projection matrix and aspect ratio
 	aspect = float(m_config.winWidth) / (float)m_config.winHeight;
-	cameraProjection = perspective_proj(PI * 0.5f, aspect, 0.1f, 100.0f);
+	cameraProjection = perspective_proj(PI * 0.5f, aspect, 0.1f, 500.0f);
 
 	//Init Shaders
 	//Get the Shaders to Compile
-	m_shMain = new ShaderProg("shaders/juzz.vert","","shaders/juzz.frag");
+	//shader = new ShaderProg("Shaders/JuzzPhong.vert","","Shaders/JuzzPhong.frag");
+	//shader = new ShaderProg("Shaders/JuzzNormal.vert","","Shaders/JuzzNormal.frag");
+	shader = new ShaderProg("Shaders/JuzzParallax.vert","","Shaders/JuzzParallax.frag");
 
 	//Bind attributes to shader variables. NB = must be done before linking shader
 	//allows the attributes to be declared in any order in the shader.
-	glBindAttribLocation(m_shMain->m_programID, 0, "in_Position");
-	glBindAttribLocation(m_shMain->m_programID, 1, "in_Color");
-	glBindAttribLocation(m_shMain->m_programID, 2, "in_Texcoord");
-	glBindAttribLocation(m_shMain->m_programID, 3, "in_Normal");
-	glBindAttribLocation(m_shMain->m_programID, 4, "in_Tangent");
+	glBindAttribLocation(shader->m_programID, 0, "in_Position");
+	glBindAttribLocation(shader->m_programID, 1, "in_Texcoord");
+	glBindAttribLocation(shader->m_programID, 2, "in_Normal");
+	glBindAttribLocation(shader->m_programID, 3, "in_Tangent");
 
 	//NB. must be done after binding attributes
 	//Compiles the shaders and makes sure they are valid
 	printf("Compiling shaders...\n");
-	res = m_shMain->CompileAndLink();
+	res = shader->CompileAndLink();
 	if (!res)
 	{
 		printf("Shaders compilation failed\n");
@@ -105,31 +106,21 @@ bool juzz_proto::InitGL()
 
 	//Assign samplers to texture units
 	printf("Setting initial uniform variables\n");
-	glUseProgram(m_shMain->m_programID);
-	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "colorMap"), 0);
-	glUniform1i(glGetUniformLocation(m_shMain->m_programID, "normalMap"), 1);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "projection"), 1, GL_FALSE, cameraProjection.m);
+	glUseProgram(shader->m_programID);
+	glUniform1i(glGetUniformLocation(shader->m_programID, "colorMap"), 0);
+	glUniform1i(glGetUniformLocation(shader->m_programID, "normalMap"), 1);
+	glUniform1i(glGetUniformLocation(shader->m_programID, "heightMap"), 2);
+	glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 1);
+	glUniformMatrix4fv(glGetUniformLocation(shader->m_programID, "projection"), 1, GL_FALSE, cameraProjection.m);
 	if (!CheckError("Creating shaders and setting initial uniforms"))
 		return false;
 	printf("Done setting initial uniforms\n");
 
-	//Setup Camera
-	cameraRotation.x = -PI / 2.0f;
-	cameraRotation.y = 0;
-	cameraRotation.z = 20.0f;
-	cameraTarget = vector3(0.0f, 0.0f, 0.0f);
-	//Update the view matrix
-	UpdateViewMatrix();
-
 	//Start the generation and setup of geometry
-	printf("Creating geometry...\n");
+	printf("Setting up scene...\n");
 	if (!Init())
 		return false;
-	printf("Geometry created, starting program...\n");
-
-	//Light initial crap
-	vector3 lightPos(cos(angle) * 50.0f, 50.0f, sin(angle) * 50.0f);
-	glUniform3f(glGetUniformLocation(m_shMain->m_programID, "light_Pos"), lightPos.x, lightPos.y, lightPos.z);
+	printf("Scene set up, starting program...\n");
 
 	//Return that everything succeeded
 	return true;
@@ -138,8 +129,23 @@ bool juzz_proto::InitGL()
 //Initialisation method to setup the program
 bool juzz_proto::Init()
 {
-	//Initialise the angle value
+	//Setup Camera
+	useCameraLight = true;
+	cameraRotation.x = -PI / 2.0f;
+	cameraRotation.y = 0;
+	cameraRotation.z = 20;
+	cameraTarget = vector3(0.0f, 0.0f, 0.0f);
+
+	//Update the view matrix
+	UpdateViewMatrix();
+
+	//Setup the lights
 	angle = PI / 2.0f;
+	UpdateLight();
+
+	//Setup the fps variables
+	frames = 0;
+	timerCount = 0.0f;
 
 	//The eight verticies for a cube
 	vector3 verts[8];
@@ -177,33 +183,6 @@ bool juzz_proto::Init()
 	verts[7][0] = -10.0f;
 	verts[7][1] = -10.0f;
 	verts[7][2] = -10.0f;
-
-	//Setup an array to store various color vectors
-	vector3 cols[6];
-	//Red
-	cols[0][0] = 1.0f;
-	cols[0][1] = 0.0f;
-	cols[0][2] = 0.0f;
-	//Green
-	cols[1][0] = 0.0f;
-	cols[1][1] = 1.0f;
-	cols[1][2] = 0.0f;
-	//Blue
-	cols[2][0] = 0.0f;
-	cols[2][1] = 0.0f;
-	cols[2][2] = 1.0f;
-	//Yellow
-	cols[3][0] = 1.0f;
-	cols[3][1] = 1.0f;
-	cols[3][2] = 0.0f;
-	//Turquoise
-	cols[4][0] = 0.0f;
-	cols[4][1] = 1.0f;
-	cols[4][2] = 1.0f;
-	//Pink
-	cols[5][0] = 1.0f;
-	cols[5][1] = 0.0f;
-	cols[5][2] = 1.0f;
 
 	//Constructs the cube based on the 8 verticies, 6 quads with 2 tris / quad
 	numOfIndices = 36;
@@ -256,42 +235,32 @@ bool juzz_proto::Init()
 	verticies[34] = verts[7];
 	verticies[35] = verts[6];
 
-	//The colours
-	vector3 *colors = new vector3[numOfIndices];
-	for (int i = 0; i < 6; i++)
-	{
-		for (int j = 0; j < 6; j++)
-		{
-			colors[(i * 6) + j] = cols[i];
-		}
-	}
-
 	//Calculate the normals for the cube
 	vector3 *normals = new vector3[numOfIndices];
 	CalculateNormals(verticies, numOfIndices, normals);
 
+	//Calculate the texture coords for the cube
 	vector2 *texcoords = new vector2[numOfIndices];
 	CalculateTexcoords(texcoords, numOfIndices);
 
+	//Calculate the tangents for the cube
 	vector3 *tangents = new vector3[numOfIndices];
 	CalculateTangents(verticies, texcoords, numOfIndices, tangents);
 
 	//Indicies
 	GLubyte *inds = new GLubyte[numOfIndices];
 	for (int i = 0; i < numOfIndices; i++)
-	{
 		inds[i] = i;
-	}
 	
 	//Set the world position of the cube
 	cubeWorld = translate_tr(0.0f, 0.0f, 0.0f);
 
 	//Load the textures
-	//LoadTexture(&colorMap, "images/heightmaps/hmap01.pgm");
-	int w, h, wn, hn;
+	int w, h, wn, hn, wh, hh;
 	glActiveTexture(GL_TEXTURE0);
-	LoadTextureJPG(&colorMap, &w, &h, "images/juzz/brick.jpg");
-	LoadTextureJPG(&normalMap, &wn, &hn, "images/juzz/brickNormal.jpg");
+	LoadTextureJPG(&colorMap, &w, &h, "Images/brick.jpg");
+	LoadTextureJPG(&normalMap, &wn, &hn, "Images/brickNormal.jpg");
+	LoadTextureJPG(&heightMap, &wh, &hh, "Images/brickHeight.jpg");
 	
 	//Create the vertex array
 	glGenVertexArrays(1, &cubeVAO);
@@ -305,34 +274,34 @@ bool juzz_proto::Init()
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, verticies, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(0);
-	//Setup the color buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, colors, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)1, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(1);
+
 	//Setup the texcoords buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[1]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(float2) * numOfIndices, texcoords, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)2, 2, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(2);
+	glVertexAttribPointer((GLuint)1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+
 	//Setup the normal buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[3]);
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[2]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, normals, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(2);
+
+	//Setup the tangent buffer
+	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[3]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, tangents, GL_STATIC_DRAW);
 	glVertexAttribPointer((GLuint)3, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(3);
-	//Setup the tangent buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[4]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfIndices, tangents, GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)4, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(4);
+
 	//Setup the index buffer
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeVBO[5]);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeVBO[4]);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLubyte) * numOfIndices, inds, GL_STATIC_DRAW);
 
+	//Delete the used arrays
 	delete[] verticies;
-	delete[] colors;
-	delete[] texcoords;
 	delete[] normals;
+	delete[] tangents;
+	delete[] texcoords;
 	delete[] inds;
 
 	//Return true that everything succeeded
@@ -357,7 +326,7 @@ void juzz_proto::ProcessInput(float dt)
 			cameraRotation.x = -TPI;
 
 		//Vertical movement along an arc
-		cameraRotation.y -= dt * move.y * PI * 0.1f;
+		cameraRotation.y += dt * move.y * PI * 0.1f;
 		//Clamp the vertical movement to prevent inverting the camera
 		if (cameraRotation.y < -HPI)
 			cameraRotation.y = -HPI;
@@ -384,51 +353,40 @@ void juzz_proto::ProcessInput(float dt)
 	{
 		wireframe ^= true;
 		if (wireframe)
-		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		}
 		else
-		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		}
 	}
 
+	//Orbit the scene light
 	if (m_input.IsKeyPressed(SDLK_r))
 	{
 		angle += (PI / 8.0f) * dt;
-		if (angle > 2.0f * PI)
-			angle -= 2.0f * PI;
-
-		vector3 lightPos(cos(angle) * 50.0f, 50.0f, sin(angle) * 50.0f);
-		glUniform3f(glGetUniformLocation(m_shMain->m_programID, "light_Pos"), lightPos.x, lightPos.y, lightPos.z);
+		UpdateLight();
 	}
 
-	static bool useCameraLight = false;
+	//Switch between static scene light or a light based off the camera position
 	if (m_input.WasKeyPressed(SDLK_c))
 	{
-		useCameraLight ^= true;
+		useCameraLight = !useCameraLight;
 		if (useCameraLight)
 		{
-			glUniform1f(glGetUniformLocation(m_shMain->m_programID, "useCameraLight"), 1.0f);
+			glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 1);
+			UpdateViewMatrix();
 		}
 		else
 		{
-			glUniform1f(glGetUniformLocation(m_shMain->m_programID, "useCameraLight"), 0.0f);
+			glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 0);
+			UpdateLight();
 		}
 	}
-
+	
 	reGL3App::ProcessInput(dt);
 }
 
 //Logic method
 void juzz_proto::Logic(float dt)
 {
-	//Update camera position in shaders
-	/*matrix4 modelView = cubeWorld * cameraView;
-	matrix3 normalMat = modelView.GetMatrix3();
-	normalMat = normalMat.Inverse().Transpose();
-	glUniformMatrix3fv(glGetUniformLocation(m_shMain->m_programID, "normalMat"), 1, GL_FALSE, normalMat.m);*/
-
 	timerCount += dt;
 	if (timerCount >= 1.0f)
 	{
@@ -442,22 +400,37 @@ void juzz_proto::Logic(float dt)
 void juzz_proto::Render(float dt)
 {
 	frames++;
+
 	//Clear the screen
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
-	//Draw the cube
+	
+	//Bind the cube VAO
 	glBindVertexArray(cubeVAO);
-	glUseProgram(m_shMain->m_programID);
+
+	//Set that gl must use the main shader program
+	glUseProgram(shader->m_programID);
+
+	//Bind the textures to the shader
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, colorMap);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, normalMap);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "world"), 1, GL_FALSE, cubeWorld.m);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, heightMap);
+
+	//Send through the world and world translation data to the shader
+	//Calculate the normal matrix for the world
+	//Draw the object
+	glUniformMatrix4fv(glGetUniformLocation(shader->m_programID, "world"), 1, GL_FALSE, cubeWorld.m);
+	glUniform3fv(glGetUniformLocation(shader->m_programID, "worldTrans"), 1, cubeWorld.GetTranslation().v);
+	UpdateNormalMatrix(cubeWorld);
 	glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_BYTE, 0);
 
-	vector3 lightPos(cos(angle) * 50.0f, 50.0f, sin(angle) * 50.0f);
+	vector3 lightPos(cos(angle) * 40.0f, 40.0f, sin(angle) * 40.0f);
 	matrix4 lworld = translate_tr(lightPos.x, lightPos.y, lightPos.z);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "world"), 1, GL_FALSE, lworld.m);
+	glUniformMatrix4fv(glGetUniformLocation(shader->m_programID, "world"), 1, GL_FALSE, lworld.m);
+	glUniform3fv(glGetUniformLocation(shader->m_programID, "worldTrans"), 1, lworld.GetTranslation().v);
+	UpdateNormalMatrix(lworld);
 	glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_BYTE, 0);
 	
 	//Check for any errors while drawing
@@ -466,20 +439,53 @@ void juzz_proto::Render(float dt)
 	SDL_GL_SwapWindow(m_pWindow);
 }
 
+//Update the lights details
+void juzz_proto::UpdateLight()
+{
+	//This wraps the angle so it doesn't become to large
+	if (angle > TPI)
+		angle -= TPI;
+
+	//Set the lightPos vector to an arc about the origin
+	vector3 lightPos(cos(angle) * 50.0f, 50.0f, sin(angle) * 50.0f);
+	//Set the value in the shader
+	if (!useCameraLight)
+		glUniform3f(glGetUniformLocation(shader->m_programID, "light_Pos"), lightPos.x, lightPos.y, lightPos.z);
+}
+
 //This function will update the view matrix
 void juzz_proto::UpdateViewMatrix()
 {
 	//Calculate the position of the camera that follows a spherical orbit
 	float radius = cameraRotation.z * cos(cameraRotation.y);
 	float rotation = cameraRotation.x;
-	vector3 cameraPos = -(cameraTarget + vector3(cos(rotation) * radius, sin(cameraRotation.y) * cameraRotation.z, sin(rotation) * radius));
+	vector3 cameraPos = vector3(cos(rotation) * radius, sin(cameraRotation.y) * cameraRotation.z, sin(rotation) * radius);
 
-	//Create the view matrix based on the
-	cameraView = create_look_at(cameraPos, cameraTarget, vector3(0.0f, 1.0f, 0.0f));
+	//Create the view matrix based on the caneras position, target and UP vector
+	cameraView = create_look_at(cameraPos, vector3(0.0f, 0.0f, 0.0f), vector3(0.0f, 1.0f, 0.0f));
 	
-	glUseProgram(m_shMain->m_programID);
-	glUniformMatrix4fv(glGetUniformLocation(m_shMain->m_programID, "view"), 1, GL_FALSE, cameraView.m);
-	glUniform3f(glGetUniformLocation(m_shMain->m_programID, "camera_Pos"), cameraPos.x, cameraPos.y, cameraPos.z);
+	//Send the view matrix to the shaders
+	glUseProgram(shader->m_programID);
+	glUniformMatrix4fv(glGetUniformLocation(shader->m_programID, "view"), 1, GL_FALSE, cameraView.m);
+
+	//Update the light position in shaders if using the camera light
+	if (useCameraLight)
+		glUniform3f(glGetUniformLocation(shader->m_programID, "light_Pos"), cameraPos.x, cameraPos.y, cameraPos.z);
+}
+
+//Updates the normal matrix
+void juzz_proto::UpdateNormalMatrix(matrix4 world)
+{
+	//Calculate the modelview matrix
+	matrix4 modelView;
+	if (useCameraLight)
+		modelView = cameraView * world;
+
+	//Retrieve the matrix3 then invert and transpose
+	matrix3 normalMat = modelView.GetMatrix3().Inverse().Transpose();
+
+	//Set the normal matrix in the shaders
+	glUniformMatrix3fv(glGetUniformLocation(shader->m_programID, "normalMatrix"), 1, GL_FALSE, normalMat.m);
 }
 
 //Function to calculate the normals for each vertex based on the triangles that it is part of
@@ -518,6 +524,7 @@ void juzz_proto::CalculateTexcoords(vector2 *texcoords, int size)
 	}
 }
 
+//Function to calculate the tangents for the cube
 void juzz_proto::CalculateTangents(vector3 *verticies, vector2 *texcoords, int size, vector3 *tangents)
 {
 	for (int i = 0; i < size; i+=6)
@@ -559,6 +566,7 @@ void juzz_proto::CalculateTangents(vector3 *verticies, vector2 *texcoords, int s
 		//printf("Tangent: %.2f, %.2f, %.2f\n", tangent.x, tangent.y, tangent.z);
 		for (int j = 0; j < 6; j++)
 		{
+
 			tangents[i + j] = tangent;
 		}
 	}

@@ -36,8 +36,13 @@ int main(int argc, char* argv[])
 	conf.VSync = true;
 	conf.gl_major = 3;
 	conf.gl_minor = 2;
-	conf.fsaa=0;
-	conf.sleepTime = .01f;
+	conf.fsaa = 0;
+	conf.sleepTime = 0.01f;
+	if (false)
+	{
+		conf.VSync = false;
+		conf.sleepTime = 0.0f;
+	}
 	juzz_proto juzz(conf);
 	
 	if (!juzz.Start())
@@ -45,7 +50,7 @@ int main(int argc, char* argv[])
 		printf("Application failed to start\n");
 		Sleep(10000);
 	}
-	//Sleep(2000);
+	Sleep(1000);
 
 	return 0;
 }

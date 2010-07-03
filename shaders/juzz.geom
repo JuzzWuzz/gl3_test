@@ -13,16 +13,12 @@ uniform mat4 world;
 uniform mat4 view;
 
 in vec4 vert_Pos[3];
-in vec4 vert_Color[3];
 in vec3 vert_Normal[3];
 in vec2 vert_Texcoords[3];
-//in mat3 vert_tbn[3];
 
 out vec4 geom_Pos;
-out vec4 geom_Color;
 out vec3 geom_Normal;
 out vec2 geom_Texcoords;
-//out mat3 geom_tbn;
 
 void main()
 {
@@ -52,10 +48,8 @@ void main()
 	{
 		gl_Position = gl_in[i].gl_Position;
 		geom_Pos = vert_Pos[i];
-		geom_Color = vert_Color[i];
 		geom_Normal = vert_Normal[i];
 		geom_Texcoords = vert_Texcoords[i];
-		//geom_tbn = vert_tbn[i];
 
 		EmitVertex();
 	}

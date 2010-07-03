@@ -186,6 +186,7 @@ namespace reMath{
 		matrix4		Transpose		(void);
 		float		Determinant		(void);
 		matrix3		GetMatrix3		(void);
+		vector3		GetTranslation	(void);
 
 	public:
 		float	m[16];
@@ -229,7 +230,7 @@ namespace reMath{
 		float		Determinant		(void);
 
 	public:
-		float	m[16];
+		float	m[9];
 	};
 	matrix4 operator*	(float scalar, const matrix4&);
 
@@ -249,6 +250,7 @@ namespace reMath{
 	vector3 perspective_unproj_view		(vector3 fragment, float w, float h, float near, float far, 
 											float tan_fovy);
 
+	bool close_enough(float f1, float f2);
 
 	matrix4 translate_tr	(float x, float y, float z);
 	matrix4 rotate_tr		(float angle, float x, float y, float z);

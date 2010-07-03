@@ -260,6 +260,19 @@ namespace reMath{
 		return out;
 	}
 
+	//-------------------------------------------------------------------------
+	// GETTRANSLATION Returns the vector3 for the translation stored here
+	vector3
+	matrix4::GetTranslation(){
+		vector3 out;
+
+		out.x = m[12];
+		out.y = m[13];
+		out.z = m[14];
+
+		return out;
+	}
+
 
 	/**************************************************************************
 	 * matrix3 
@@ -444,7 +457,7 @@ namespace reMath{
 	void 
 	matrix3::SetIdentity(){
 		memset((void*)m, 0, sizeof(m));
-		m[0] = m[4]= m[8] = 1.0f;
+		m[0] = m[5]= m[8] = 1.0f;
 	}
 
 	//-------------------------------------------------------------------------
@@ -454,22 +467,22 @@ namespace reMath{
 		matrix3 out;
 		float det = Determinant();
 
-		if (det == 0.0f){
+		if (close_enough(det, 0.0f)){
 			out.SetIdentity();
 		} else{
 			det = 1.0f / det;
 
-			out.m[0] = det * (m[4] * m[8] - m[7] * m[5]);
-			out.m[3] = det * (m[6] * m[5] - m[3] * m[8]);
-			out.m[6] = det * (m[3] * m[7] - m[6] * m[4]);
+			out.m[0] = det * (m[4] * m[8] - m[5] * m[7]);
+			out.m[1] = det * (m[2] * m[7] - m[1] * m[8]);
+			out.m[2] = det * (m[1] * m[5] - m[2] * m[4]);
 
-			out.m[1] = det * (m[7] * m[2] - m[1] * m[8]);
-			out.m[4] = det * (m[0] * m[8] - m[6] * m[2]);
-			out.m[7] = det * (m[6] * m[1] - m[0] * m[7]);
+			out.m[3] = det * (m[5] * m[6] - m[3] * m[8]);
+			out.m[4] = det * (m[0] * m[8] - m[2] * m[6]);
+			out.m[5] = det * (m[2] * m[3] - m[0] * m[5]);
 
-			out.m[3] = det * (m[1] * m[5] - m[4] * m[2]);
-			out.m[5] = det * (m[2] * m[2] - m[0] * m[5]);
-			out.m[8] = det * (m[0] * m[4] - m[2] * m[1]);
+			out.m[6] = det * (m[3] * m[7] - m[4] * m[6]);
+			out.m[7] = det * (m[1] * m[6] - m[0] * m[7]);
+			out.m[8] = det * (m[0] * m[4] - m[1] * m[3]);
 		}
 
 		return out;
@@ -1218,6 +1231,14 @@ namespace reMath{
 		y = y * (-z) * tan_fovy;
 		x = x * (-z) * aspect * tan_fovy;
 		return vector3(x,y,z);
+	}
+
+	//-------------------------------------------------------------------------
+	// CLOSE_ENOUGH returns a bool on the difference of f1 and f2 if they
+	// are close enough to each other.
+	bool
+	close_enough(float f1, float f2){
+		return fabsf((f1 - f2) / ((f2 == 0.0f) ? 1.0f : f2)) < 1e-6f;
 	}
 
 	/******************************************************************************

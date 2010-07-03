@@ -24,7 +24,7 @@ typedef struct{
 #define HPI (1.56905099753f)
 #define  PI (3.14159265358f)
 #define TPI (6.28318530716f)
-#define VBOCOUNT 6
+#define VBOCOUNT 5
 
 class juzz_proto : public reGL3App
 {
@@ -42,7 +42,9 @@ private:
 	bool Init(void);
 	bool InitGL(void);
 
+	void UpdateLight();
 	void UpdateViewMatrix();
+	void UpdateNormalMatrix(matrix4 world); 
 	void CalculateNormals(vector3 *verticies, int size, vector3 *normals);
 	void CalculateTexcoords(vector2 *texcoords, int size);
 	void CalculateTangents(vector3 *verticies, vector2 *texcoords, int size, vector3 *tangents);
@@ -52,14 +54,15 @@ private:
 
 //Variables
 public:
-	ShaderProg* m_shMain; //Use the provided shader program class
+	ShaderProg* shader; //Use the provided shader program class
 
 	GLuint cubeVAO;
-	GLuint cubeVBO[VBOCOUNT]; //VBOs for vertices, colors, tex coords, normals, tangents, indices
+	GLuint cubeVBO[VBOCOUNT]; //VBOs for vertices, normals, tangents, tex coords, indices
 	int numOfIndices;
 
 	GLuint colorMap;
 	GLuint normalMap;
+	GLuint heightMap;
 
 	matrix4 cubeWorld;
 
@@ -69,6 +72,8 @@ public:
 	vector3 cameraTarget;
 
 	float angle;
+	bool useCameraLight;
+
 	int frames;
 	float timerCount;
 };
