@@ -5,6 +5,7 @@ uniform vec3 worldTrans;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat3 normalMatrix;
+uniform float texScale;
 uniform vec3 light_Pos;
 uniform int useCameraLight;
 
@@ -60,9 +61,9 @@ void main()
 	vert_LightDirOrig = vert_LightDir;
 
 	//Multiply the view and light vectors by the tbn matrix
-	vert_View = tbn * (pos.xyz / pos.w);
+	vert_View = tbn * -(pos.xyz / pos.w);
 	vert_LightDir = tbn * vert_LightDir;
 
 	//Pass through the texture coordinates
-	vert_Texcoords = in_Texcoords;
+	vert_Texcoords = in_Texcoords * texScale;
 }

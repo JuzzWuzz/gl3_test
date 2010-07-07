@@ -73,6 +73,8 @@ public:
 
 	float angle;
 	bool useCameraLight;
+	bool useParallaxMapping;
+	float texScale;
 
 	int frames;
 	float timerCount;

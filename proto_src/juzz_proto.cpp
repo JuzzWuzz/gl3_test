@@ -81,9 +81,8 @@ bool juzz_proto::InitGL()
 
 	//Init Shaders
 	//Get the Shaders to Compile
+	shader = new ShaderProg("Shaders/JuzzNormalParallax.vert","","Shaders/JuzzNormalParallax.frag");
 	//shader = new ShaderProg("Shaders/JuzzPhong.vert","","Shaders/JuzzPhong.frag");
-	//shader = new ShaderProg("Shaders/JuzzNormal.vert","","Shaders/JuzzNormal.frag");
-	shader = new ShaderProg("Shaders/JuzzParallax.vert","","Shaders/JuzzParallax.frag");
 
 	//Bind attributes to shader variables. NB = must be done before linking shader
 	//allows the attributes to be declared in any order in the shader.
@@ -111,6 +110,7 @@ bool juzz_proto::InitGL()
 	glUniform1i(glGetUniformLocation(shader->m_programID, "normalMap"), 1);
 	glUniform1i(glGetUniformLocation(shader->m_programID, "heightMap"), 2);
 	glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 1);
+	glUniform1i(glGetUniformLocation(shader->m_programID, "useParallaxMapping"), 0);
 	glUniformMatrix4fv(glGetUniformLocation(shader->m_programID, "projection"), 1, GL_FALSE, cameraProjection.m);
 	if (!CheckError("Creating shaders and setting initial uniforms"))
 		return false;
@@ -135,6 +135,9 @@ bool juzz_proto::Init()
 	cameraRotation.y = 0;
 	cameraRotation.z = 20;
 	cameraTarget = vector3(0.0f, 0.0f, 0.0f);
+
+	//Disable parallax mapping to start
+	useParallaxMapping = false;
 
 	//Update the view matrix
 	UpdateViewMatrix();
@@ -257,10 +260,11 @@ bool juzz_proto::Init()
 
 	//Load the textures
 	int w, h, wn, hn, wh, hh;
-	glActiveTexture(GL_TEXTURE0);
 	LoadTextureJPG(&colorMap, &w, &h, "Images/brick.jpg");
 	LoadTextureJPG(&normalMap, &wn, &hn, "Images/brickNormal.jpg");
 	LoadTextureJPG(&heightMap, &wh, &hh, "Images/brickHeight.jpg");
+	texScale = 1.0f;
+	glUniform1f(glGetUniformLocation(shader->m_programID, "texScale"), texScale);
 	
 	//Create the vertex array
 	glGenVertexArrays(1, &cubeVAO);
@@ -359,9 +363,14 @@ void juzz_proto::ProcessInput(float dt)
 	}
 
 	//Orbit the scene light
-	if (m_input.IsKeyPressed(SDLK_r))
+	if (m_input.IsKeyPressed(SDLK_q))
 	{
 		angle += (PI / 8.0f) * dt;
+		UpdateLight();
+	}
+	if (m_input.IsKeyPressed(SDLK_e))
+	{
+		angle -= (PI / 8.0f) * dt;
 		UpdateLight();
 	}
 
@@ -371,16 +380,44 @@ void juzz_proto::ProcessInput(float dt)
 		useCameraLight = !useCameraLight;
 		if (useCameraLight)
 		{
-			glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 1);
 			UpdateViewMatrix();
+			glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 1);
 		}
 		else
 		{
-			glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 0);
 			UpdateLight();
+			glUniform1i(glGetUniformLocation(shader->m_programID, "useCameraLight"), 0);
+			
+			//Disable parallax mapping since it looks worse for world light
+			useParallaxMapping = false;
+			glUniform1i(glGetUniformLocation(shader->m_programID, "useParallaxMapping"), 0);
 		}
 	}
-	
+
+	//Switch between normal mapping and parallax mapping
+	if (m_input.WasKeyPressed(SDLK_n))
+	{
+		useParallaxMapping = !useParallaxMapping;
+		if (useParallaxMapping)
+			glUniform1i(glGetUniformLocation(shader->m_programID, "useParallaxMapping"), 1);
+		else
+			glUniform1i(glGetUniformLocation(shader->m_programID, "useParallaxMapping"), 0);
+	}
+
+	//Controls to adjust the scale of the texture coordinates
+	if (m_input.WasKeyPressed(SDLK_PAGEUP))
+	{
+		texScale += 0.5f;
+		texScale = min(texScale, 10.0f);
+		glUniform1f(glGetUniformLocation(shader->m_programID, "texScale"), texScale);
+	}
+	if (m_input.WasKeyPressed(SDLK_PAGEDOWN))
+	{
+		texScale -= 0.5f;
+		texScale = max(texScale, 0.5f);
+		glUniform1f(glGetUniformLocation(shader->m_programID, "texScale"), texScale);
+	}
+
 	reGL3App::ProcessInput(dt);
 }
 
@@ -418,6 +455,12 @@ void juzz_proto::Render(float dt)
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, heightMap);
 
+	//Set the lightPos vector to an arc about the origin
+	vector3 lightPos(cos(angle) * 50.0f, 50.0f, sin(angle) * 50.0f);
+	//Set the value in the shader
+	if (!useCameraLight)
+		glUniform3f(glGetUniformLocation(shader->m_programID, "light_Pos"), lightPos.x, lightPos.y, lightPos.z);
+
 	//Send through the world and world translation data to the shader
 	//Calculate the normal matrix for the world
 	//Draw the object
@@ -426,7 +469,10 @@ void juzz_proto::Render(float dt)
 	UpdateNormalMatrix(cubeWorld);
 	glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_BYTE, 0);
 
-	vector3 lightPos(cos(angle) * 40.0f, 40.0f, sin(angle) * 40.0f);
+	if (!useCameraLight)
+		glUniform3f(glGetUniformLocation(shader->m_programID, "light_Pos"), -lightPos.x, -lightPos.y, -lightPos.z);
+
+	lightPos.set(cos(angle) * 40.0f, 40.0f, sin(angle) * 40.0f);
 	matrix4 lworld = translate_tr(lightPos.x, lightPos.y, lightPos.z);
 	glUniformMatrix4fv(glGetUniformLocation(shader->m_programID, "world"), 1, GL_FALSE, lworld.m);
 	glUniform3fv(glGetUniformLocation(shader->m_programID, "worldTrans"), 1, lworld.GetTranslation().v);
@@ -480,6 +526,8 @@ void juzz_proto::UpdateNormalMatrix(matrix4 world)
 	matrix4 modelView;
 	if (useCameraLight)
 		modelView = cameraView * world;
+	else
+		modelView = world;
 
 	//Retrieve the matrix3 then invert and transpose
 	matrix3 normalMat = modelView.GetMatrix3().Inverse().Transpose();
@@ -511,6 +559,13 @@ void juzz_proto::CalculateTexcoords(vector2 *texcoords, int size)
 	vector2 topR(1.0f, 0.0f);
 	vector2 botL(0.0f, 1.0f);
 	vector2 botR(1.0f, 1.0f);
+	if (true)
+	{
+		topL.set(0.0f, 1.0f);
+		topR.set(1.0f, 1.0f);
+		botL.set(0.0f, 0.0f);
+		botR.set(1.0f, 0.0f);
+	}
 
 	for (int i = 0; i < size / 6; i++)
 	{
@@ -622,9 +677,9 @@ bool juzz_proto::LoadTextureJPG(GLuint* tex, int* width, int* height, string fil
 	glGenTextures(1, tex);
 	glBindTexture(GL_TEXTURE_2D, *tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);//GL_REPEAT
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);//GL_REPEAT
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
 	if (!CheckError("Loading JPG texture, setting parameters"))
 		return false;

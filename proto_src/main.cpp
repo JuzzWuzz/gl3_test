@@ -37,6 +37,8 @@ int main(int argc, char* argv[])
 	conf.gl_major = 3;
 	conf.gl_minor = 2;
 	conf.fsaa = 0;
+	//conf.winWidth = 1920;
+	//conf.winHeight = 1080;
 	conf.sleepTime = 0.01f;
 	if (false)
 	{
