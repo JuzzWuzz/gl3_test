@@ -115,7 +115,12 @@ ShaderProg::LoadSource(string path){
 	while(fin){
 		string tmp;
 		getline(fin, tmp);
-		ret << tmp << endl;
+		
+		//If an include file is specified then load that file
+		if (tmp.compare(0, 13, "#IncludeFile:") == 0)
+			ret << LoadSource(path.substr(0, path.find_last_of("/\\")) + "/" + tmp.substr(13)) << endl;
+		else
+			ret << tmp << endl;
 	}   
 
 	fin.close();

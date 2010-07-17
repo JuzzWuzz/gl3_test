@@ -6,32 +6,19 @@
 	UCT Honours Project 2010 - Deformable Terrain
 */
 
-#include "regl3.h"
-#include "re_math.h"
-#include "re_shader.h"
-#include <SDL/SDL_image.h>
+#include "JuzzUtility.h"
 
 using namespace reMath;
 
 #ifndef JUZZ_PROTO
 #define JUZZ_PROTO
 
-//A float 2 struct
-typedef struct{
-	float u, v;
-} float2;
-
-#define HPI (1.56905099753f)
-#define  PI (3.14159265358f)
-#define TPI (6.28318530716f)
-#define VBOCOUNT 5
-
 class juzz_proto : public reGL3App
 {
 //Methods
 public:
 	juzz_proto(AppConfig& conf);
-	~juzz_proto();
+	~juzz_proto(void);
 
 	//Overridden methods
 	void ProcessInput(float dt);
@@ -42,8 +29,8 @@ private:
 	bool Init(void);
 	bool InitGL(void);
 
-	void UpdateLight();
-	void UpdateViewMatrix();
+	void UpdateLight(void);
+	void UpdateViewMatrix(void);
 	void UpdateNormalMatrix(matrix4 world); 
 	void CalculateNormals(vector3 *verticies, int size, vector3 *normals);
 	void CalculateTexcoords(vector2 *texcoords, int size);
@@ -54,10 +41,10 @@ private:
 
 //Variables
 public:
-	ShaderProg* shader; //Use the provided shader program class
+	ShaderManager *shaders;
 
 	GLuint cubeVAO;
-	GLuint cubeVBO[VBOCOUNT]; //VBOs for vertices, normals, tangents, tex coords, indices
+	GLuint cubeVBO[VBOCOUNT];
 	int numOfIndices;
 
 	GLuint colorMap;
@@ -71,9 +58,12 @@ public:
 	vector3 cameraRotation;
 	vector3 cameraTarget;
 
-	float angle;
+	vector3 lightRotation;
+	matrix4 lightWorld;
+	bool viewFromLight;
+	bool viewFromLightPrev;
 	bool useCameraLight;
-	bool useParallaxMapping;
+	bool wireframe;
 	float texScale;
 
 	int frames;
