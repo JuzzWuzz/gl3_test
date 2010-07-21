@@ -12,8 +12,12 @@
 //--------------------------------------------------------------------------------
 
 //Constructor
-VBOData::VBOData(float n_divs, float n_width, bool cube)
+VBOData::VBOData(ShaderManager *n_shaderManager, float n_divs, float n_width, bool cube)
 {
+	//Store the shader manager
+	shaderManager = n_shaderManager;
+	shader = 0;
+
 	//Set the number of divisions and calculate how many verticies
 	divs = n_divs;
 	numOfVerticies = (int)pow((divs + 1.0f), 2.0f);
@@ -57,33 +61,35 @@ VBOData::VBOData(float n_divs, float n_width, bool cube)
 
 	//Since multiple normals & tangents are calculated, calculate the average
 	AverageNormalsTangents();
+
+	//Bind the data to the VAO & VBO's
+	BindVBOData();
 }
 
 //Destructor
 VBOData::~VBOData(void)
 {
-	RE_DELETE_ARR(verticies);
-	RE_DELETE_ARR(texcoords);
-	RE_DELETE_ARR(normals);
-	RE_DELETE_ARR(tangents);
-	RE_DELETE_ARR(normalCount);
-	RE_DELETE_ARR(indicies);
+	DeleteData();
+	glDeleteBuffers(VBOCOUNT, VBO);
+	glDeleteVertexArrays(1, &VAO);
 }
 
-//Accessors to return the size of the data structures
-int VBOData::GetVerticiesSize(void)	{ return (sizeof(vector3) * numOfVerticies); }
-int VBOData::GetTexcoordsSize(void)	{ return (sizeof(vector2) * numOfVerticies); }
-int VBOData::GetNormalsSize(void)	{ return (sizeof(vector3) * numOfVerticies); }
-int VBOData::GetTangentsSize(void)	{ return (sizeof(vector3) * numOfVerticies); }
-int VBOData::GetIndiciesSize(void)	{ return (sizeof(GLuint) * numOfIndicies); }
-int VBOData::GetNumOfIndicies(void)	{ return (numOfIndicies); }
+//Draw the object
+void VBOData::DrawObject(void)
+{
+	//Set the active shader
+	shaderManager->SetActiveShader(shader);
 
-//Accessors to return the actual data structures
-vector3 *VBOData::GetVerticies(void)	{ return (verticies); }
-vector2 *VBOData::GetTexcoords(void)	{ return (texcoords); }
-vector3 *VBOData::GetNormals(void)	{ return (normals); }
-vector3 *VBOData::GetTangents(void)	{ return (tangents); }
-GLuint *VBOData::GetIndicies(void)	{ return (indicies); }
+	//Bind the VAO and draw
+	glBindVertexArray(VAO);
+	glDrawElements(GL_TRIANGLES, numOfIndicies, GL_UNSIGNED_INT, 0);
+}
+
+//Change the shader this object uses
+void VBOData::SetShader(int n_shader)
+{
+	shader = n_shader;
+}
 
 //Calculate the data for a entire cube
 void VBOData::CalculateCube(void)
@@ -153,6 +159,16 @@ void VBOData::CalculatePlane(void)
 	verts[2][1] = 0.0f;
 	verts[2][2] = width;
 
+	verts[0][0] = -width;
+	verts[0][1] = width;
+	verts[0][2] = 0.0f;
+	verts[1][0] = width;
+	verts[1][1] = width;
+	verts[1][2] = 0.0f;
+	verts[2][0] = -width;
+	verts[2][1] = -width;
+	verts[2][2] = 0.0f;
+
 	//Calculate data for a single face
 	CalculateFace(verts[0], verts[1], verts[2]);
 }
@@ -173,10 +189,10 @@ void VBOData::CalculateFace(vector3 tl, vector3 tr, vector3 bl)
 		for (int j = 0; j < (divs + 1); j++)
 		{
 			//Set the vertex position
-			verticies[curVertOffset] = tl + (vInci * i) + (vIncj * j);
+			verticies[curVertOffset] = tl + (vInci * (float)i) + (vIncj * (float)j);
 
 			//Set the texture coordinates
-			texcoords[curVertOffset] = textl + (texInci * i) + (texIncj * j);
+			texcoords[curVertOffset] = textl + (texInci * (float)i) + (texIncj * (float)j);
 
 			//Initialize normal and tangent
 			normals[curVertOffset] = vector3(0.0f, 0.0f, 0.0f);
@@ -190,7 +206,7 @@ void VBOData::CalculateFace(vector3 tl, vector3 tr, vector3 bl)
 				//Create variables for position of verticies in quad
 				int botR = curVertOffset;
 				int botL = botR - 1;
-				int topR = curVertOffset - (divs + 1);
+				int topR = curVertOffset - ((int)divs + 1);
 				int topL = topR - 1;
 
 				//Calculate the index values
@@ -271,8 +287,67 @@ void VBOData::AverageNormalsTangents(void)
 {
 	for (int i = 0; i < numOfVerticies; i++)
 	{
-		normals[i] /= normalCount[i];
-		tangents[i] /= normalCount[i];
+		normals[i] /= (float)normalCount[i];
+		tangents[i] /= (float)normalCount[i];
+	}
+}
+
+//Bind the data to the VAO & VBO's
+void VBOData::BindVBOData(void)
+{
+	//Create the vertex array
+	glGenVertexArrays(1, &VAO);
+	glBindVertexArray(VAO);
+
+	//Generate three VBOs for vertices, indices, colors
+	glGenBuffers(VBOCOUNT, VBO);
+
+	//Setup the vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfVerticies, verticies, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
+
+	//Setup the texcoords buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector2) * numOfVerticies, texcoords, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)1, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(1);
+
+	//Setup the normal buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfVerticies, normals, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(2);
+
+	//Setup the tangent buffer
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vector3) * numOfVerticies, tangents, GL_STATIC_DRAW);
+	glVertexAttribPointer((GLuint)3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(3);
+
+	//Setup the index buffer
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VBO[4]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * numOfIndicies, indicies, GL_STATIC_DRAW);
+
+	//Clear the data from system memory
+	DeleteData();
+}
+
+//Delete the VBO data from system memory
+void VBOData::DeleteData(void)
+{
+	//Make sure that the data can only be deleted once
+	if (!dataDeleted)
+	{
+		dataDeleted = true;
+
+		RE_DELETE_ARR(verticies);
+		RE_DELETE_ARR(texcoords);
+		RE_DELETE_ARR(normals);
+		RE_DELETE_ARR(tangents);
+		RE_DELETE_ARR(normalCount);
+		RE_DELETE_ARR(indicies);
 	}
 }
 
@@ -289,7 +364,6 @@ void VBOData::AverageNormalsTangents(void)
 ShaderManager::ShaderManager(void)
 {
 	curIndex = 0;
-	activeShader = 0;
 }
 
 //Destructor
@@ -332,7 +406,6 @@ void ShaderManager::UpdateUni1i(char *name, int val)
 		glUseProgram(shaders[i]->m_programID);
 		glUniform1i(glGetUniformLocation(shaders[i]->m_programID, name), val);
 	}
-	glUseProgram(shaders[activeShader]->m_programID);
 }
 
 //Update a uniform value for a float
@@ -343,7 +416,6 @@ void ShaderManager::UpdateUni1f(char *name, float val)
 		glUseProgram(shaders[i]->m_programID);
 		glUniform1f(glGetUniformLocation(shaders[i]->m_programID, name), val);
 	}
-	glUseProgram(shaders[activeShader]->m_programID);
 }
 
 //Update a uniform value for a float3
@@ -354,7 +426,6 @@ void ShaderManager::UpdateUni3fv(char *name, float val[3])
 		glUseProgram(shaders[i]->m_programID);
 		glUniform3fv(glGetUniformLocation(shaders[i]->m_programID, name), 1, val);
 	}
-	glUseProgram(shaders[activeShader]->m_programID);
 }
 
 //Update a uniform value for a matrix3
@@ -365,7 +436,6 @@ void ShaderManager::UpdateUniMat3fv(char *name, float val[9])
 		glUseProgram(shaders[i]->m_programID);
 		glUniformMatrix3fv(glGetUniformLocation(shaders[i]->m_programID, name), 1, GL_FALSE, val);
 	}
-	glUseProgram(shaders[activeShader]->m_programID);
 }
 
 //Update a uniform value for a matrix4
@@ -377,7 +447,6 @@ void ShaderManager::UpdateUniMat4fv(char *name, float val[16])
 		glUniformMatrix4fv(glGetUniformLocation(shaders[i]->m_programID, name), 1, GL_FALSE, val);
 
 	}
-	glUseProgram(shaders[activeShader]->m_programID);
 }
 
 //Compile and link the shaders
@@ -397,5 +466,11 @@ int ShaderManager::CompileAndLink(void)
 //Set the active shader to be used
 void ShaderManager::SetActiveShader(int shader)
 {
-	activeShader = shader;
+	if (shader >= SHADERCOUNT)
+		return;
+	glUseProgram(shaders[shader]->m_programID);
 }
+
+//--------------------------------------------------------------------------------
+//	End Class:	ShaderManager
+//--------------------------------------------------------------------------------

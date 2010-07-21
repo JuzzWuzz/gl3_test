@@ -16,32 +16,24 @@ using namespace reMath;
 #define  PI (3.14159265358f)
 #define TPI (6.28318530716f)
 #define VBOCOUNT 5
-#define SHADERCOUNT 3
-#define DISPSHADER true
-#define DISABLESHADERS false
+#define SHADERCOUNT 6
 
 #ifndef JUZZUTILITY
 #define JUZZUTILITY
+
+//Forward declarations
+class VBOData;
+class ShaderManager;
 
 //Class to handle the VBO data
 class VBOData
 {
 public:
-	VBOData(float n_divs, float n_width, bool cube);
+	VBOData(ShaderManager *n_shaderManager, float n_divs, float n_width, bool cube);
 	~VBOData(void);
 
-	//Accessors
-	int GetVerticiesSize(void);
-	int GetTexcoordsSize(void);
-	int GetNormalsSize(void);
-	int GetTangentsSize(void);
-	int GetIndiciesSize(void);
-	int GetNumOfIndicies(void);
-	vector3 *GetVerticies(void);
-	vector2 *GetTexcoords(void);
-	vector3 *GetNormals(void);
-	vector3 *GetTangents(void);
-	GLuint *GetIndicies(void);
+	void DrawObject(void);
+	void SetShader(int n_shader);
 
 private:
 	//Hidden methods
@@ -50,6 +42,8 @@ private:
 	void CalculateFace(vector3 tl, vector3 tr, vector3 bl);
 	void CalculateNormalTangent(int vertCenter, int vertLeft, int vertRight);
 	void AverageNormalsTangents(void);
+	void BindVBOData(void);
+	void DeleteData(void);
 
 	//Variables
 	float divs;
@@ -58,6 +52,13 @@ private:
 	int numOfIndicies;
 	int curVertOffset;
 	int curIndOffset;
+	bool dataDeleted;
+
+	//Variables for drawing data
+	GLuint VAO;
+	GLuint VBO[VBOCOUNT];
+	int shader;
+	ShaderManager *shaderManager;
 
 	//Initial texcoords
 	vector2 textl;
@@ -95,7 +96,6 @@ public:
 private:
 	ShaderProg *shaders[SHADERCOUNT];
 	int curIndex;
-	int activeShader;
 };
 
 #endif

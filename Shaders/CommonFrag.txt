@@ -2,8 +2,8 @@
 
 //Common uniform variables
 uniform sampler2D colorMap;
-uniform sampler2D normalMap;
-uniform sampler2D heightMap;
+uniform sampler2D parallaxHeightMap;
+uniform sampler2D parallaxNormalMap;
 uniform int wireframe;
 
 //Common input variables
@@ -20,15 +20,19 @@ vec4 light_Ambient = vec4(0.19225, 0.19225, 0.19225, 1.0);
 vec4 light_Diffuse = vec4(0.50754, 0.50754, 0.50754, 1.0);
 vec4 light_Specular = vec4(0.508273, 0.508273, 0.508273, 1.0);
 
+vec4 materialColor = vec4(1.0, 1.0, 1.0, 1.0);
+
 float parallaxScale = 0.05;
-float parallaxBias = -0.026;
+float parallaxBias = -0.022;
+int parallaxItrNum = 4;
 
 //Check to see if light will strike the vertex
 bool CanDoLighting(vec2 texcoords, vec3 normal, vec3 light)
 {
+	//If in wireframe more set the colour to grey and exit shaders
 	if (wireframe == 1)
 	{
-		frag_Color = vec4(0.5, 0.5, 0.5, 1.0);
+		frag_Color = vec4(0.75, 0.75, 0.75, 1.0);
 		return (false);
 	}
 
@@ -42,7 +46,7 @@ bool CanDoLighting(vec2 texcoords, vec3 normal, vec3 light)
 }
 
 //Calculate the phong lighting for a single light
-vec4 CommonFragmentProcessing(vec2 texcoords, vec3 normal, vec3 lightDir, vec3 view)
+vec4 CommonFragmentProcessing(vec2 texcoords, vec3 normal, vec3 view, vec3 lightDir)
 {
 	//Initial variables and settings
 	vec4 colorTex = texture2D(colorMap, texcoords);

@@ -6,6 +6,9 @@
 //Additional shader specific parameters
 uniform sampler2D heightMap;
 uniform sampler2D heightNormalMap;
+in vec3 in_Tangent;
+out vec3 vert_View_TBN;
+out vec3 vert_LightDir_TBN;
 out vec3 vert_NormalDisp;
 
 void main()
@@ -64,4 +67,17 @@ void main()
 		CommonVertexProcessing();
 		vert_NormalDisp = vert_Normal;
 	}
+
+	//Read in the tangent and calculate the binormal
+	vec3 tangent = normalize(normalMatrix * in_Tangent);
+	vec3 binormal = normalize(cross(vert_Normal, tangent));
+
+	//Calculate the TBN matrix
+	mat3 tbn = mat3(tangent.x, binormal.x, vert_Normal.x,
+					tangent.y, binormal.y, vert_Normal.y,
+					tangent.z, binormal.z, vert_Normal.z);
+
+	//Multiply the view and light vectors by the tbn matrix
+	vert_View_TBN = tbn * vert_View;
+	vert_LightDir_TBN = tbn * vert_LightDir;
 }

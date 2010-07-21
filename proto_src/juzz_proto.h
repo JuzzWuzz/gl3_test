@@ -32,9 +32,6 @@ private:
 	void UpdateLight(void);
 	void UpdateViewMatrix(void);
 	void UpdateNormalMatrix(matrix4 world); 
-	void CalculateNormals(vector3 *verticies, int size, vector3 *normals);
-	void CalculateTexcoords(vector2 *texcoords, int size);
-	void CalculateTangents(vector3 *verticies, vector2 *texcoords, int size, vector3 *tangents);
 	bool CheckError(string);
 	bool LoadTexturePNG(GLuint* tex, int* width, int* height, string filename);
 	bool LoadTextureJPG(GLuint* tex, int* width, int* height, string filename);
@@ -43,13 +40,14 @@ private:
 public:
 	ShaderManager *shaders;
 
-	GLuint cubeVAO;
-	GLuint cubeVBO[VBOCOUNT];
-	int numOfIndices;
+	VBOData *cube;
+	VBOData *light;
 
 	GLuint colorMap;
-	GLuint normalMap;
+	GLuint parallaxHeightMap;
+	GLuint parallaxNormalMap;
 	GLuint heightMap;
+	GLuint heightNormalMap;
 
 	matrix4 cubeWorld;
 
@@ -63,11 +61,17 @@ public:
 	bool viewFromLight;
 	bool viewFromLightPrev;
 	bool useCameraLight;
+
 	bool wireframe;
 	float texScale;
 
 	int frames;
 	float timerCount;
+
+	bool calcMinMaxFPS;
+	int minFPS;
+	int maxFPS;
+	vector<int> fpsTracker;
 };
 
 #endif

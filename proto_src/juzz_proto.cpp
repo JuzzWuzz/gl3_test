@@ -23,11 +23,14 @@ juzz_proto::~juzz_proto(void)
 	glDisableVertexAttribArray(1);
 	glDisableVertexAttribArray(2);
 	glDisableVertexAttribArray(3);
-	glDeleteBuffers(VBOCOUNT, cubeVBO);
-	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteTextures(1, &colorMap);
-	glDeleteTextures(1, &normalMap);
+	glDeleteTextures(1, &parallaxHeightMap);
+	glDeleteTextures(1, &parallaxNormalMap);
 	glDeleteTextures(1, &heightMap);
+	glDeleteTextures(1, &heightNormalMap);
+
+	RE_DELETE(cube);
+	RE_DELETE(light);
 }
 
 //OpenGL Initialisation method to setup the OpenGL context and settings
@@ -83,10 +86,13 @@ bool juzz_proto::InitGL(void)
 
 	//Create a new shader manager and send it the various shaders
 	shaders = new ShaderManager();
+	shaders->AddShader("Shaders/JuzzSimple.vert","","Shaders/JuzzSimple.frag");
 	shaders->AddShader("Shaders/JuzzPhong.vert","","Shaders/JuzzPhong.frag");
-	shaders->AddShader("Shaders/JuzzNormalParallax.vert","","Shaders/JuzzNormalParallax.frag");
+	shaders->AddShader("Shaders/JuzzNormal.vert","","Shaders/JuzzNormal.frag");
+	shaders->AddShader("Shaders/JuzzParallax.vert","","Shaders/JuzzParallax.frag");
 	shaders->AddShader("Shaders/JuzzDisp.vert","","Shaders/JuzzDisp.frag");
-
+	shaders->AddShader("Shaders/JuzzDispParallax.vert","","Shaders/JuzzDispParallax.frag");
+	
 	//Bind attributes to shader variables. NB = must be done before linking shader
 	//allows the attributes to be declared in any order in the shader.
 	shaders->BindAttrib("in_Position", 0);
@@ -109,8 +115,10 @@ bool juzz_proto::InitGL(void)
 	//Assign samplers to texture units and set some initial uniforms
 	printf("Setting initial uniform variables\n");
 	shaders->UpdateUni1i("colorMap", 0);
-	shaders->UpdateUni1i("normalMap", 1);
-	shaders->UpdateUni1i("heightMap", 2);
+	shaders->UpdateUni1i("parallaxHeightMap", 1);
+	shaders->UpdateUni1i("parallaxNormalMap", 2);
+	shaders->UpdateUni1i("heightMap", 3);
+	shaders->UpdateUni1i("heightNormalMap", 4);
 	shaders->UpdateUni1i("useCameraLight", 1);
 	shaders->UpdateUniMat4fv("projection", cameraProjection.m);
 	if (!CheckError("Creating shaders and setting initial uniforms"))
@@ -132,68 +140,50 @@ bool juzz_proto::Init(void)
 {
 	//Setup Camera
 	useCameraLight = true;
-	cameraRotation.set(-PI / 2.0f, 0.0f, 20.0f);
+	cameraRotation = vector3(-PI / 4.0f, HPI / 2.5f, 20.0f);
 	cameraTarget = vector3(0.0f, 0.0f, 0.0f);
 
 	//Update the view matrix
 	UpdateViewMatrix();
 
 	//Setup the lights
+	viewFromLight = false;
+	viewFromLightPrev = false;
 	lightRotation.set(0.0f, HPI, 20.0f);
 	UpdateLight();
 
 	//Setup the fps variables
 	frames = 0;
 	timerCount = 0.0f;
+	calcMinMaxFPS = false;
+	minFPS = 9999;
+	maxFPS = -1;
+
+	//Other variable initialisation
+	wireframe = false;
+	shaders->UpdateUni1i("wireframe", 0);
 
 	//Set the world position of the cube
 	cubeWorld = translate_tr(0.0f, 0.0f, 0.0f);
 
 	//Load the textures
-	int w, h, wn, hn, wh, hh;
+	int w, h, wn, hn, wh, hh, whn, hhn;
 	LoadTextureJPG(&colorMap, &w, &h, "Images/brick.jpg");
-	LoadTextureJPG(&normalMap, &wn, &hn, "Images/brickNormal.jpg");
+	LoadTextureJPG(&parallaxHeightMap, &wn, &hn, "Images/brickParallaxHeight.jpg");
+	LoadTextureJPG(&parallaxNormalMap, &wn, &hn, "Images/brickParallaxNormal.jpg");
 	LoadTextureJPG(&heightMap, &wh, &hh, "Images/brickHeight.jpg");
+	LoadTextureJPG(&heightNormalMap, &whn, &hhn, "Images/brickHeightNormal.jpg");
+
 	texScale = 1.0f;
 	shaders->UpdateUni1f("texScale", texScale);
-	
-	//Create the vertex array
-	glGenVertexArrays(1, &cubeVAO);
-	glBindVertexArray(cubeVAO);
 
-	//Generate three VBOs for vertices, indices, colors
-	glGenBuffers(VBOCOUNT, cubeVBO);
+	//Create a cube and set it to use the standard phong shader
+	cube = new VBOData(shaders, 50.0f, 10.0f, true);
+	cube->SetShader(1);
 
-	VBOData cube(50.0f, 10.0f, true);
-	numOfIndices = cube.GetNumOfIndicies();
-
-	//Setup the vertex buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[0]);
-	glBufferData(GL_ARRAY_BUFFER, cube.GetVerticiesSize(), cube.GetVerticies(), GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(0);
-
-	//Setup the texcoords buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, cube.GetTexcoordsSize(), cube.GetTexcoords(), GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)1, 2, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(1);
-
-	//Setup the normal buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[2]);
-	glBufferData(GL_ARRAY_BUFFER, cube.GetNormalsSize(), cube.GetNormals(), GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(2);
-
-	//Setup the tangent buffer
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO[3]);
-	glBufferData(GL_ARRAY_BUFFER, cube.GetTangentsSize(), cube.GetTangents(), GL_STATIC_DRAW);
-	glVertexAttribPointer((GLuint)3, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(3);
-
-	//Setup the index buffer
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, cubeVBO[4]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, cube.GetIndiciesSize(), cube.GetIndicies(), GL_STATIC_DRAW);
+	//Create the light and set it to use the basic shader
+	light = new VBOData(shaders, 1.0f, 1.0f, true);
+	light->SetShader(0);
 
 	//Return true that everything succeeded
 	return(true);
@@ -208,7 +198,36 @@ void juzz_proto::ProcessInput(float dt)
 	//Variables to determine if viewing from light
 	viewFromLightPrev = viewFromLight;
 	viewFromLight = false;
-	
+
+	if (m_input.WasKeyPressed(SDLK_t))
+	{
+		if (!calcMinMaxFPS)
+		{
+			minFPS = 9999;
+			maxFPS = -1;
+			fpsTracker.clear();
+			calcMinMaxFPS = true;
+		}
+		else
+			calcMinMaxFPS = false;
+	}
+
+	if (m_input.WasKeyPressed(SDLK_g))
+	{
+		int avg = 0;
+		int size = fpsTracker.size();
+		printf("size: %d\n", size);
+
+		for (int i = 0; i < size; i++)
+		{
+			avg += fpsTracker.at(i);
+		}
+		float avgf = (float)avg / (float)size;
+
+		printf("Min:Max FPS -> %d:%d\n", minFPS, maxFPS);
+		printf("Avg         -> %.2f\n", avgf);
+	}
+
 	//Movement of the light about its orbit
 	if (m_input.IsKeyPressed(SDLK_q) && !useCameraLight)
 	{
@@ -304,12 +323,18 @@ void juzz_proto::ProcessInput(float dt)
 	}
 
 	//Input to change the shaders
-	if (m_input.WasKeyPressed(SDLK_1))
-		shaders->SetActiveShader(0);
+	if (m_input.WasKeyPressed(SDLK_0))
+		cube->SetShader(0);
+	else if (m_input.WasKeyPressed(SDLK_1))
+		cube->SetShader(1);
 	else if (m_input.WasKeyPressed(SDLK_2))
-		shaders->SetActiveShader(1);
+		cube->SetShader(2);
 	else if (m_input.WasKeyPressed(SDLK_3))
-		shaders->SetActiveShader(2);
+		cube->SetShader(3);
+	else if (m_input.WasKeyPressed(SDLK_4))
+		cube->SetShader(4);
+	else if (m_input.WasKeyPressed(SDLK_5))
+		cube->SetShader(5);
 
 	//Switch between static scene light or a light based off the camera position
 	if (m_input.WasKeyPressed(SDLK_c))
@@ -351,7 +376,13 @@ void juzz_proto::Logic(float dt)
 	if (timerCount >= 1.0f)
 	{
 		timerCount = 0.0f;
-		//printf("FPS: %d\n", frames);
+		printf("FPS: %d\n", frames);
+		if (calcMinMaxFPS)
+		{
+			minFPS = min(minFPS, frames);
+			maxFPS = max(maxFPS, frames);
+			fpsTracker.push_back(frames);
+		}
 		frames = 0;
 	}
 }
@@ -365,16 +396,17 @@ void juzz_proto::Render(float dt)
 	//Clear the screen
 	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 	
-	//Bind the cube VAO
-	glBindVertexArray(cubeVAO);
-
 	//Bind the textures to the shader
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, colorMap);
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, normalMap);
+	glBindTexture(GL_TEXTURE_2D, parallaxHeightMap);
 	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, parallaxNormalMap);
+	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D, heightMap);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, heightNormalMap);
 
 	//Send through the world and world translation data to the shader
 	//Calculate the normal matrix for the world
@@ -382,15 +414,15 @@ void juzz_proto::Render(float dt)
 	shaders->UpdateUni3fv("worldTrans", cubeWorld.GetTranslation().v);
 	shaders->UpdateUniMat4fv("world", cubeWorld.m);
 	UpdateNormalMatrix(cubeWorld);
-	glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_INT, 0);
+	cube->DrawObject();
 
 	//Only draw the light if not updating its position
-	if (!viewFromLight)
+	if (!viewFromLight && !useCameraLight)
 	{
 		shaders->UpdateUni3fv("worldTrans", lightWorld.GetTranslation().v);
 		shaders->UpdateUniMat4fv("world", lightWorld.m);
 		UpdateNormalMatrix(lightWorld);
-		glDrawElements(GL_TRIANGLES, numOfIndices, GL_UNSIGNED_INT, 0);
+		light->DrawObject();
 	}
 
 	//Check for any errors while drawing
@@ -408,7 +440,7 @@ void juzz_proto::UpdateLight(void)
 	vector3 lightPos = vector3(cos(rotation) * radius, sin(lightRotation.y) * lightRotation.z, sin(rotation) * radius);
 
 	//Update the lights world matrix
-	lightWorld = translate_tr(lightPos) * scale_tr(0.25f);
+	lightWorld = translate_tr(lightPos);
 	
 	//Set the light position in the shader
 	shaders->UpdateUni3fv("light_Pos", lightPos.v);
@@ -417,8 +449,8 @@ void juzz_proto::UpdateLight(void)
 	if (viewFromLight)
 	{
 		//Create the view matrix based on the caneras position, target and UP vector
-		cameraView = create_look_at(lightPos, vector3(0.0f, 0.0f, 0.0f), vector3(0.0f, 1.0f, 0.0f));
-	
+		cameraView = create_look_at(lightPos, cameraTarget, vector3(0.0f, 1.0f, 0.0f));
+		
 		//Send the view matrix to the shaders
 		shaders->UpdateUniMat4fv("view", cameraView.m);
 
@@ -436,7 +468,7 @@ void juzz_proto::UpdateViewMatrix(void)
 	vector3 cameraPos = vector3(cos(rotation) * radius, sin(cameraRotation.y) * cameraRotation.z, sin(rotation) * radius);
 
 	//Create the view matrix based on the caneras position, target and UP vector
-	cameraView = create_look_at(cameraPos, vector3(0.0f, 0.0f, 0.0f), vector3(0.0f, 1.0f, 0.0f));
+	cameraView = create_look_at(cameraPos, cameraTarget, vector3(0.0f, 1.0f, 0.0f));
 	
 	//Send the view matrix to the shaders
 	shaders->UpdateUniMat4fv("view", cameraView.m);

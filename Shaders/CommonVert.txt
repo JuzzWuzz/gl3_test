@@ -18,10 +18,10 @@ in vec2 in_Texcoords;
 in vec3 in_Normal;
 
 //Common output variables
-out vec2 vert_Texcoords;
 out vec3 vert_Normal;
 out vec3 vert_View;
 out vec3 vert_LightDir;
+out vec2 vert_Texcoords;
 
 //Mutable variables
 vec4 heightOffset = vec4(0.0, 0.0, 0.0, 0.0);
@@ -29,12 +29,9 @@ vec4 heightOffset = vec4(0.0, 0.0, 0.0, 0.0);
 //Perform the basic vertex shading functions
 void CommonVertexProcessing()
 {
-	//Set the texture coordinates
-	vert_Texcoords = in_Texcoords * texScale;
-
 	//Perform model view projection matrix calculation
 	mat4 mv = view * world;
-	mat4 mvp = projection * view * world;
+	mat4 mvp = projection * mv;
 
 	//Output the final position of the vertex
 	vec4 pos = vec4(in_Position, 1.0);
@@ -42,7 +39,7 @@ void CommonVertexProcessing()
 	gl_Position = mvp * pos;
 
 	//Store the vertex normal
-	vert_Normal = normalize(normalMatrix * in_Normal);
+	vert_Normal = normalMatrix * in_Normal;
 
 	//Choice between camera light or world light
 	if (useCameraLight == 1)
@@ -59,4 +56,7 @@ void CommonVertexProcessing()
 		vert_View = camera_Pos - (pos.xyz / pos.w);
 		vert_LightDir = light_Pos;
 	}
+
+	//Set the texture coordinates
+	vert_Texcoords = in_Texcoords * texScale;
 }

@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 	//conf.winWidth = 1920;
 	//conf.winHeight = 1080;
 	conf.sleepTime = 0.01f;
-	if (false)
+	if (true)
 	{
 		conf.VSync = false;
 		conf.sleepTime = 0.0f;
