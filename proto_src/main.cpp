@@ -25,6 +25,10 @@
 #pragma comment(lib, "sdl_image.lib")
 #endif
 
+#ifndef _WIN32
+#	define Sleep(x) 	{}
+#endif
+
 #include "juzz_proto.h"
 
 /******************************************************************************
