@@ -13,6 +13,9 @@ using namespace reMath;
 #ifndef JUZZ_PROTO
 #define JUZZ_PROTO
 
+#define FAR_PLANE			(1000.0f)
+#define NEAR_PLANE			(.5f)
+
 class juzz_proto : public reGL3App
 {
 //Methods
@@ -29,7 +32,6 @@ private:
 	bool Init(void);
 	bool InitGL(void);
 
-	void UpdateLight(void);
 	void UpdateViewMatrix(void);
 	void UpdateNormalMatrix(matrix4 world); 
 	bool CheckError(string);
@@ -41,7 +43,6 @@ public:
 	ShaderManager *shaders;
 
 	VBOData *cube;
-	VBOData *light;
 
 	GLuint colorMap;
 	GLuint parallaxHeightMap;
@@ -54,24 +55,13 @@ public:
 	matrix4 cameraProjection;
 	matrix4 cameraView;
 	vector3 cameraRotation;
+	vector3 cameraTranslation;
 	vector3 cameraTarget;
 
-	vector3 lightRotation;
-	matrix4 lightWorld;
-	bool viewFromLight;
-	bool viewFromLightPrev;
-	bool useCameraLight;
-
 	bool wireframe;
-	float texScale;
 
 	int frames;
 	float timerCount;
-
-	bool calcMinMaxFPS;
-	int minFPS;
-	int maxFPS;
-	vector<int> fpsTracker;
 };
 
 #endif

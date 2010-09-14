@@ -11,7 +11,7 @@ out vec3 vert_NormalDisp;
 void main()
 {
 	//Need to access texcoords (DUPLICATED - NO WORKAROUND FOUND)
-	vec2 texcoords = in_Texcoords * texScale;
+	vec2 texcoords = in_Texcoords;
 
 	//Calculate rotation matrix to reorientate the normal
 	//Vec a -> Textures stored with z-up so set this statically
@@ -49,7 +49,7 @@ void main()
 		normalRot *= normalRot;
 
 	//Only displace non-border verticies
-	if (!(texcoords.s == 0.0 || texcoords.s == texScale || texcoords.t == 0.0 || texcoords.t == texScale))
+	if (!(texcoords.s == 0.0 || texcoords.s == 1.0 || texcoords.t == 0.0 || texcoords.t == 1.0))
 	{  
 		//Read in the height value and offset this in the normals direction
 		heightOffset = vec4(in_Normal, 0.0) * texture2D(heightMap, texcoords).r;

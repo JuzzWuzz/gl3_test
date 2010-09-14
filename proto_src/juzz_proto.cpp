@@ -30,7 +30,6 @@ juzz_proto::~juzz_proto(void)
 	glDeleteTextures(1, &heightNormalMap);
 
 	RE_DELETE(cube);
-	RE_DELETE(light);
 }
 
 //OpenGL Initialisation method to setup the OpenGL context and settings
@@ -119,7 +118,6 @@ bool juzz_proto::InitGL(void)
 	shaders->UpdateUni1i("parallaxNormalMap", 2);
 	shaders->UpdateUni1i("heightMap", 3);
 	shaders->UpdateUni1i("heightNormalMap", 4);
-	shaders->UpdateUni1i("useCameraLight", 1);
 	shaders->UpdateUniMat4fv("projection", cameraProjection.m);
 	if (!CheckError("Creating shaders and setting initial uniforms"))
 		return false;
@@ -139,32 +137,22 @@ bool juzz_proto::InitGL(void)
 bool juzz_proto::Init(void)
 {
 	//Setup Camera
-	useCameraLight = true;
-	cameraRotation = vector3(-PI / 4.0f, HPI / 2.5f, 20.0f);
+	cameraRotation = vector3(0.0f, 0.0f, 0.0f);
 	cameraTarget = vector3(0.0f, 0.0f, 0.0f);
 
 	//Update the view matrix
 	UpdateViewMatrix();
 
-	//Setup the lights
-	viewFromLight = false;
-	viewFromLightPrev = false;
-	lightRotation.set(0.0f, HPI, 20.0f);
-	UpdateLight();
-
 	//Setup the fps variables
 	frames = 0;
 	timerCount = 0.0f;
-	calcMinMaxFPS = false;
-	minFPS = 9999;
-	maxFPS = -1;
 
 	//Other variable initialisation
 	wireframe = false;
 	shaders->UpdateUni1i("wireframe", 0);
 
 	//Set the world position of the cube
-	cubeWorld = translate_tr(0.0f, 0.0f, 0.0f);
+	cubeWorld = translate_tr(0.0f, 10.0f, 0.0f);
 
 	//Load the textures
 	int w, h, wn, hn, wh, hh, whn, hhn;
@@ -174,16 +162,10 @@ bool juzz_proto::Init(void)
 	LoadTextureJPG(&heightMap, &wh, &hh, "Images/brickHeight.jpg");
 	LoadTextureJPG(&heightNormalMap, &whn, &hhn, "Images/brickHeightNormal.jpg");
 
-	texScale = 1.0f;
-	shaders->UpdateUni1f("texScale", texScale);
-
 	//Create a cube and set it to use the standard phong shader
+	printf("Cube Object\n");
 	cube = new VBOData(shaders, 50.0f, 10.0f, true);
 	cube->SetShader(1);
-
-	//Create the light and set it to use the basic shader
-	light = new VBOData(shaders, 1.0f, 1.0f, true);
-	light->SetShader(0);
 
 	//Return true that everything succeeded
 	return(true);
@@ -194,117 +176,92 @@ void juzz_proto::ProcessInput(float dt)
 {
 	//Change in mouse position
 	MouseDelta move = m_input.GetMouseDelta();
+	//Number of mouse wheel ticks since last update
+	int wheel_ticks = m_input.GetWheelTicks();
 
-	//Variables to determine if viewing from light
-	viewFromLightPrev = viewFromLight;
-	viewFromLight = false;
+	static vector2 clickPos;
+	static bool clicked = false;
 
-	if (m_input.WasKeyPressed(SDLK_t))
+	//Controls to determine if the camera has been updated
+	vector3 cameraRorationPrev = cameraRotation;
+	vector3 cameraTranslationPrev = cameraTranslation;
+
+	//Left click and hold to move mouse around
+	if (m_input.IsButtonPressed(1))
 	{
-		if (!calcMinMaxFPS)
-		{
-			minFPS = 9999;
-			maxFPS = -1;
-			fpsTracker.clear();
-			calcMinMaxFPS = true;
-		}
-		else
-			calcMinMaxFPS = false;
+		//Pitch
+		cameraRotation.x += move.y * 0.005f;
+		//Yaw
+		cameraRotation.y += move.x * 0.005f;
+
+		//Clamp the camera to prevent the user flipping
+		//upside down messing up everything
+		if (cameraRotation.x < -HPI)
+			cameraRotation.x = -HPI;
+		if (cameraRotation.x > HPI)
+			cameraRotation.x = HPI;
 	}
 
-	if (m_input.WasKeyPressed(SDLK_g))
+	//Right mouse click for selecting point to deform
+	if (m_input.IsButtonPressed(3))
 	{
-		int avg = 0;
-		int size = fpsTracker.size();
-		printf("size: %d\n", size);
+		MousePos pos = m_input.GetMousePos();
+		float val;
+		float w = m_config.winWidth;
+		float h = m_config.winHeight;
+		float aspect = float(m_config.winWidth) / m_config.winHeight;
 
-		for (int i = 0; i < size; i++)
-		{
-			avg += fpsTracker.at(i);
-		}
-		float avgf = (float)avg / (float)size;
+		//Get value in z-buffer
+		glReadPixels(pos.x, m_config.winHeight- pos.y, 1,1,GL_DEPTH_COMPONENT, GL_FLOAT, &val);
 
-		printf("Min:Max FPS -> %d:%d\n", minFPS, maxFPS);
-		printf("Avg         -> %.2f\n", avgf);
+		vector3 frag(pos.x,pos.y,val);
+		//Derive inverse of view transform (could just use transpose of view matrix
+		matrix4 inverse = rotate_tr(-cameraRotation.y, .0f, 1.0f, .0f) * rotate_tr(-cameraRotation.x, 1.0f, .0f, .0f);
+
+		//Request unprojected coordinate
+		vector3 p = perspective_unproj_world(frag, w, h, NEAR_PLANE, FAR_PLANE, 1.0f, inverse);
+		p += cameraTranslation;
+		//p *= m_scale_metreToTex;
+		vector2 tc = vector2(p.x+.5f, p.z+.5f);
+
+		clicked = true;
+		clickPos = tc;
+
+		//Pass to shader
+		shaders->UpdateUni2fv("click_pos", tc.v);
 	}
 
-	//Movement of the light about its orbit
-	if (m_input.IsKeyPressed(SDLK_q) && !useCameraLight)
-	{
-		viewFromLight = true;
+	//Speed in m/s for movement
+	float speed = 5.0f;
+	//If super speed activated then increase speed
+	if (m_input.IsKeyPressed(SDLK_LSHIFT))
+		speed *= 10.0f;
 
-		//Mouse left button down
-		if (m_input.IsButtonPressed(1))
-		{
-			//Horizontal movement around a circular orbit
-			lightRotation.x += dt * move.x * PI * 0.1f;
-			//Wrap the values to prevent them getting to large
-			if (lightRotation.x < -TPI)
-				lightRotation.x = TPI;
-			else if (lightRotation.x > TPI)
-				lightRotation.x = -TPI;
+	//Controls for movement
+	//Calculate rotation based on yaw for left/right movement
+	matrix4 rot = rotate_tr(-cameraRotation.y, .0f, 1.0f, .0f);
+	//Moving left
+	if (m_input.IsKeyPressed(SDLK_a))
+		cameraTranslation += rot * vector3(-speed, .0f, .0f) * dt;
+	//Moving right
+	if (m_input.IsKeyPressed(SDLK_d))
+		cameraTranslation += rot * vector3(speed, .0f, .0f) * dt;
 
-			//Vertical movement along an arc
-			lightRotation.y += dt * move.y * PI * 0.1f;
-			//Clamp the vertical movement to prevent inverting the light
-			if (lightRotation.y < -HPI)
-				lightRotation.y = -HPI;
-			else if (lightRotation.y > HPI)
-				lightRotation.y = HPI;
-		}
-		//Mouse right button down
-		else if (m_input.IsButtonPressed(3))
-		{
-			//Ability to track inwards and outwards
-			lightRotation.z += dt * move.y * 10.0f;
-			if (lightRotation.z < 5.0f)
-				lightRotation.z = 5.0f;
-		}
+	//Factor in the pitch to the rotation for forwad/backward movement
+	rot *= rotate_tr(-cameraRotation.x, 1.0f, .0f, .0f);
+	//Moving forward 
+	if (m_input.IsKeyPressed(SDLK_w))
+		cameraTranslation += rot * vector3(.0f, .0f, -speed) * dt;
+	//Moving backward
+	if (m_input.IsKeyPressed(SDLK_s))
+		cameraTranslation += rot * vector3(.0f, .0f, speed) * dt;
 
-		//Update the lights position
-		UpdateLight();
-	}
-	//If not affecting the light then allow camera movement
-	else
-	{
-		//Mouse left button down
-		if (m_input.IsButtonPressed(1))
-		{
-			//Horizontal movement around a circular orbit
-			cameraRotation.x += dt * move.x * PI * 0.1f;
-			//Wrap the values to prevent them getting to large
-			if (cameraRotation.x < -TPI)
-				cameraRotation.x = TPI;
-			else if (cameraRotation.x > TPI)
-				cameraRotation.x = -TPI;
-
-			//Vertical movement along an arc
-			cameraRotation.y += dt * move.y * PI * 0.1f;
-			//Clamp the vertical movement to prevent inverting the camera
-			if (cameraRotation.y < -HPI)
-				cameraRotation.y = -HPI;
-			else if (cameraRotation.y > HPI)
-				cameraRotation.y = HPI;
-
-			//Update the view matrix
-			UpdateViewMatrix();
-		}
-		//Mouse right button down
-		else if (m_input.IsButtonPressed(3))
-		{
-			//Ability to track inwards and outwards
-			cameraRotation.z += dt * move.y * 10.0f;
-			if (cameraRotation.z < 0.1f)
-				cameraRotation.z = 0.1f;
-
-			//Update the view matrix
-			UpdateViewMatrix();
-		}
-	}
-
-	//If the light was being updated and now is not then return to camera view
-	if (viewFromLightPrev == true && viewFromLight == false)
-		UpdateViewMatrix();
+	//Moving upwards
+	if (m_input.IsKeyPressed(SDLK_e))
+		cameraTranslation += vector3(.0f, speed, .0f) * dt;
+	//Moving downwards
+	if (m_input.IsKeyPressed(SDLK_q))
+		cameraTranslation += vector3(.0f, -speed, .0f) * dt;
 
 	//Toggle wireframe
 	if (m_input.WasKeyPressed(SDLK_l))
@@ -322,6 +279,11 @@ void juzz_proto::ProcessInput(float dt)
 		}
 	}
 
+	//Update the view matrix details only if the camera has changed
+	if (cameraTranslation != cameraTranslationPrev ||
+		cameraRotation != cameraRorationPrev)
+		UpdateViewMatrix();
+
 	//Input to change the shaders
 	if (m_input.WasKeyPressed(SDLK_0))
 		cube->SetShader(0);
@@ -336,36 +298,6 @@ void juzz_proto::ProcessInput(float dt)
 	else if (m_input.WasKeyPressed(SDLK_5))
 		cube->SetShader(5);
 
-	//Switch between static scene light or a light based off the camera position
-	if (m_input.WasKeyPressed(SDLK_c))
-	{
-		useCameraLight = !useCameraLight;
-		if (useCameraLight)
-		{
-			UpdateViewMatrix();
-			shaders->UpdateUni1i("useCameraLight", 1);
-		}
-		else
-		{
-			UpdateLight();
-			shaders->UpdateUni1i("useCameraLight", 0);
-		}
-	}
-
-	//Controls to adjust the scale of the texture coordinates
-	if (m_input.WasKeyPressed(SDLK_PAGEUP))
-	{
-		texScale += 0.5f;
-		texScale = min(texScale, 10.0f);
-		shaders->UpdateUni1f("texScale", texScale);
-	}
-	if (m_input.WasKeyPressed(SDLK_PAGEDOWN))
-	{
-		texScale -= 0.5f;
-		texScale = max(texScale, 0.5f);
-		shaders->UpdateUni1f("texScale", texScale);
-	}
-
 	reGL3App::ProcessInput(dt);
 }
 
@@ -377,12 +309,6 @@ void juzz_proto::Logic(float dt)
 	{
 		timerCount = 0.0f;
 		printf("FPS: %d\n", frames);
-		if (calcMinMaxFPS)
-		{
-			minFPS = min(minFPS, frames);
-			maxFPS = max(maxFPS, frames);
-			fpsTracker.push_back(frames);
-		}
 		frames = 0;
 	}
 }
@@ -416,65 +342,23 @@ void juzz_proto::Render(float dt)
 	UpdateNormalMatrix(cubeWorld);
 	cube->DrawObject();
 
-	//Only draw the light if not updating its position
-	if (!viewFromLight && !useCameraLight)
-	{
-		shaders->UpdateUni3fv("worldTrans", lightWorld.GetTranslation().v);
-		shaders->UpdateUniMat4fv("world", lightWorld.m);
-		UpdateNormalMatrix(lightWorld);
-		light->DrawObject();
-	}
-
 	//Check for any errors while drawing
 	CheckError("Error drawing");
 
 	SDL_GL_SwapWindow(m_pWindow);
 }
 
-//Update the lights details
-void juzz_proto::UpdateLight(void)
-{
-	//Calculate the position of the light that follows a spherical orbit
-	float radius = lightRotation.z * cos(lightRotation.y);
-	float rotation = lightRotation.x;
-	vector3 lightPos = vector3(cos(rotation) * radius, sin(lightRotation.y) * lightRotation.z, sin(rotation) * radius);
-
-	//Update the lights world matrix
-	lightWorld = translate_tr(lightPos);
-	
-	//Set the light position in the shader
-	shaders->UpdateUni3fv("light_Pos", lightPos.v);
-
-	//Set the view point to that of the light
-	if (viewFromLight)
-	{
-		//Create the view matrix based on the caneras position, target and UP vector
-		cameraView = create_look_at(lightPos, cameraTarget, vector3(0.0f, 1.0f, 0.0f));
-		
-		//Send the view matrix to the shaders
-		shaders->UpdateUniMat4fv("view", cameraView.m);
-
-		//Set the cameras position in the shader
-		shaders->UpdateUni3fv("camera_Pos", lightPos.v);
-	}
-}
-
 //This function will update the view matrix
 void juzz_proto::UpdateViewMatrix(void)
 {
-	//Calculate the position of the camera that follows a spherical orbit
-	float radius = cameraRotation.z * cos(cameraRotation.y);
-	float rotation = cameraRotation.x;
-	vector3 cameraPos = vector3(cos(rotation) * radius, sin(cameraRotation.y) * cameraRotation.z, sin(rotation) * radius);
-
-	//Create the view matrix based on the caneras position, target and UP vector
-	cameraView = create_look_at(cameraPos, cameraTarget, vector3(0.0f, 1.0f, 0.0f));
-	
-	//Send the view matrix to the shaders
-	shaders->UpdateUniMat4fv("view", cameraView.m);
+	//Create the view matrix based on the cameras rotation and translation
+	cameraView = rotate_tr(cameraRotation.x, 1.0f, .0f, .0f) * rotate_tr(cameraRotation.y, .0f, 1.0f, .0f) * translate_tr(-cameraTranslation);
 
 	//Set the cameras position in the shader
-	shaders->UpdateUni3fv("camera_Pos", cameraPos.v);
+	shaders->UpdateUni3fv("camera_Pos", cameraTranslation.v);
+
+	//Send the view matrix to the shaders
+	shaders->UpdateUniMat4fv("view", cameraView.m);
 }
 
 //Updates the normal matrix
@@ -482,10 +366,7 @@ void juzz_proto::UpdateNormalMatrix(matrix4 world)
 {
 	//Calculate the modelview matrix
 	matrix4 modelView;
-	if (useCameraLight)
-		modelView = cameraView * world;
-	else
-		modelView = world;
+	modelView = cameraView * world;
 
 	//Retrieve the matrix3 then invert and transpose
 	matrix3 normalMat = modelView.GetMatrix3().Inverse().Transpose();

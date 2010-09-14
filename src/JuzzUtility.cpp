@@ -418,6 +418,16 @@ void ShaderManager::UpdateUni1f(char *name, float val)
 	}
 }
 
+//Update a uniform value for a float
+void ShaderManager::UpdateUni2fv(char *name, float val[2])
+{
+	for (int i = 0; i < curIndex; i++)
+	{
+		glUseProgram(shaders[i]->m_programID);
+		glUniform2fv(glGetUniformLocation(shaders[i]->m_programID, name), 1, val);
+	}
+}
+
 //Update a uniform value for a float3
 void ShaderManager::UpdateUni3fv(char *name, float val[3])
 {

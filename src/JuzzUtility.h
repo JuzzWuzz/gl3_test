@@ -86,6 +86,7 @@ public:
 	void BindAttrib(char *name, int val);
 	void UpdateUni1i(char *name, int val);
 	void UpdateUni1f(char *name, float val);
+	void UpdateUni2fv(char *name, float val[2]);
 	void UpdateUni3fv(char *name, float val[3]);
 	void UpdateUniMat3fv(char *name, float val[9]);
 	void UpdateUniMat4fv(char *name, float val[16]);
